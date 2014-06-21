@@ -31,6 +31,33 @@ $ export CLRENV_PATH=/path/to/environment.yaml
 => "sf"
 ```
 
+## Add a mode
+
+* Edit the `environment.yaml` file.
+```
+# environment.yaml
+base:
+  name: foo
+  location: sf
+
+production:
+  location: nyc
+```
+
+* Set a mode:
+```
+$ export CLRENV_MODE=production
+```
+
+* Access env varianble from python
+```
+> from clrenv import env
+> env.name
+=> "foo"
+> env.location
+=> "nyc"
+```
+
 ## Add an overlay
 
 * Create a file called `environment.overlay.yaml`.
