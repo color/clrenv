@@ -10,7 +10,7 @@ def find_environment_path(name='environment.yaml'):
         return CLRENV_PATH
     return _recursively_find_file_path(name)
 
-def find_user_environment_paths(name='environment.user.yaml'):
+def find_user_environment_path(name='environment.user.yaml'):
     if CLRENV_OVERLAY_PATH:
         return CLRENV_OVERLAY_PATH
     return _recursively_find_file_path(name)

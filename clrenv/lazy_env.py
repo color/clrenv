@@ -41,8 +41,8 @@ _env = {}
 def get_env(*mode):
     global _env
     if not mode in _env:
-        upaths = find_user_environment_paths()
-        uy = tuple(map(yaml.load, map(lambda p: open(p).read(), upaths)))
+        upath = find_user_environment_path()
+        uy = tuple(map(yaml.load, map(lambda p: open(p).read(), [upath])))
         y = uy + (_load_current_environment(),)
 
         assignments = filter(lambda m: m.find('=') != -1, mode)
@@ -132,7 +132,7 @@ def _setattr_rec(d, k, v):
 def _load_current_environment():
     with open(find_environment_path()) as f:
         environment = yaml.load(f.read())
-        return environment['base']
+    return environment
 
 def _keyfile(path):
     import clrypt
