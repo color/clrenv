@@ -9,6 +9,8 @@ import types
 from bunch import Bunch, bunchify
 import yaml
 
+from .path import find_environment_path, find_user_environment_path
+
 
 class LazyEnv(object):
     def __init__(self):
