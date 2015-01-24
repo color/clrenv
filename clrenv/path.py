@@ -8,7 +8,10 @@ CLRENV_OVERLAY_PATH = environ.get('CLRENV_OVERLAY_PATH', None)
 def find_environment_path(name='environment.yaml'):
     if CLRENV_PATH:
         return CLRENV_PATH
-    return _recursively_find_file_path(name)
+    path = _recursively_find_file_path(name)
+    if not path:
+        raise Exception("%s could not be located." % name)
+    return path
 
 def find_user_environment_path(name='environment.user.yaml'):
     if CLRENV_OVERLAY_PATH:
@@ -22,4 +25,4 @@ def _recursively_find_file_path(name):
         if os.path.exists(dir_path):
             return os.path.abspath(dir_path)
         path = os.path.join('..', path)
-    raise Exception("%s could not be located." % name)
+    return None

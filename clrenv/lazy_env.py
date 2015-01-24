@@ -43,9 +43,11 @@ _env = {}
 def get_env(*mode):
     global _env
     if not mode in _env:
+        y = (_load_current_environment(),)
         upath = find_user_environment_path()
-        uy = tuple(map(yaml.load, map(lambda p: open(p).read(), [upath])))
-        y = uy + (_load_current_environment(),)
+        if upath:
+            uy = tuple(map(yaml.load, map(lambda p: open(p).read(), [upath])))
+            y = uy + y
 
         assignments = filter(lambda m: m.find('=') != -1, mode)
         mode = filter(lambda m: m.find('=') == -1, mode)
