@@ -72,7 +72,7 @@ base:
 $ export CLRENV_OVERLAY_PATH=/path/to/environment.overlay.yaml
 ```
 
-* Access env varianble from python
+* Access env variable from python
 ```
 > from clrenv import env
 > env.name
@@ -80,3 +80,5 @@ $ export CLRENV_OVERLAY_PATH=/path/to/environment.overlay.yaml
 > env.location
 => "sf"
 ```
+
+`CLRENV_OVERLAY_PATH` may have multiple files separated by `:`, e.g. `/path/foo.overlay.yaml:/path/bar.overlay.yaml`.
