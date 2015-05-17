@@ -9,7 +9,7 @@ import types
 from bunch import Bunch, bunchify
 import yaml
 
-from .path import find_environment_path, find_user_environment_path
+from .path import find_environment_path, find_user_environment_paths
 
 
 class LazyEnv(object):
@@ -44,10 +44,9 @@ def get_env(*mode):
     global _env
     if not mode in _env:
         y = (_load_current_environment(),)
-        upath = find_user_environment_path()
-        if upath:
-            uy = tuple(map(yaml.load, map(lambda p: open(p).read(), [upath])))
-            y = uy + y
+        upaths = find_user_environment_paths()
+        uy = tuple(map(yaml.load, map(lambda p: open(p).read(), upaths)))
+        y = uy + y
 
         assignments = filter(lambda m: m.find('=') != -1, mode)
         mode = filter(lambda m: m.find('=') == -1, mode)
