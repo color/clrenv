@@ -1,5 +1,5 @@
 import os.path
-from  os import environ
+from os import environ
 from glob import glob
 from itertools import chain, groupby
 import shlex
@@ -45,8 +45,7 @@ def get_env(*mode):
     if not mode in _env:
         y = (_load_current_environment(),)
         upaths = find_user_environment_paths()
-        uy = tuple(map(yaml.load, map(lambda p: open(p).read(), upaths)))
-        y = uy + y
+        y = tuple(yaml.load(open(p).read()) for p in upaths if os.path.isfile(p)) + y
 
         assignments = filter(lambda m: m.find('=') != -1, mode)
         mode = filter(lambda m: m.find('=') == -1, mode)
