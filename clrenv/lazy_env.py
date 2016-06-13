@@ -136,13 +136,23 @@ def _load_current_environment():
         environment = yaml.load(f.read())
     return environment
 
-def _keyfile(path):
+_kf_dict_cache = {}
+def _get_keyfile_cache():
+    """
+    To avoid loading the encrypted file for each key, cache it.
+    Make sure to call _clear_keyfile_cache() once the cache is no longer needed.
+    """
     import clrypt
+    global _kf_dict_cache
+    if not _kf_dict_cache:
+        _kf_dict_cache = clrypt.read_file_as_dict('keys', 'keys')
+    return _kf_dict_cache
 
-    kf_dict = clrypt.read_file_as_dict('keys', 'keys')
-    return kf_dict.get(path, '')
+def _clear_keyfile_cache():
+    global _kf_dict_cache
+    _kf_dict_cache = {}
 
-def _apply_functions(d):
+def _apply_functions(d, recursive=False):
     """Apply a set of functions to the given environment. Functions
     are parsed from values of the format:
 
@@ -154,14 +164,17 @@ def _apply_functions(d):
 
     for k, v in d.iteritems():
         if isinstance(v, dict):
-            v = _apply_functions(v)
+            v = _apply_functions(v, recursive=True)
         elif isinstance(v, (str, unicode)):
             if v.startswith('^keyfile '):
                 v = v[9:]
-                v = _keyfile(v)
+                v = _get_keyfile_cache().get(v, '')
 
         new[k] = v
 
+    if not recursive:
+        # Cache no longer needed, clear encrypted data.
+        _clear_keyfile_cache()
     return new
 
 def _mergedict(*dicts):
