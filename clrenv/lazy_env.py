@@ -1,3 +1,4 @@
+from __future__ import print_function
 from builtins import object
 import os.path
 from os import environ
@@ -184,9 +185,9 @@ def _merge(dst, src):
     """Merges src into dst, overwriting values if necessary."""
     for key in src:
         if key in dst and isinstance(dst[key], dict) and isinstance(src[key], dict):
-            merge(dst[key], src[key])
+            _merge(dst[key], src[key])
         else:
-            dst[key] = b[key]
+            dst[key] = src[key]
     return dst
 
 def _merged(*dicts):

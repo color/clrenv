@@ -6,7 +6,7 @@ A tool to give easy access to environment yaml file to python.
 
 * Install clrenv
 ```
-$ git+https://github.com/color/clrenv.git@v0.1.4
+$ git+https://github.com/color/clrenv.git@v0.1.6
 ```
 
 * Create a file called `environment.yaml`.
