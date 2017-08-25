@@ -1,3 +1,4 @@
+from builtins import object
 import os.path
 from os import environ
 from glob import glob
@@ -6,10 +7,11 @@ import shlex
 import sys
 import types
 
-from bunch import Bunch, bunchify
+from munch import Munch, munchify
 import yaml
 
 from .path import find_environment_path, find_user_environment_paths
+from functools import reduce
 
 
 class LazyEnv(object):
@@ -42,26 +44,27 @@ class LazyEnv(object):
 _env = {}
 def get_env(*mode):
     global _env
+
     if not mode in _env:
         y = (_load_current_environment(),)
         upaths = find_user_environment_paths()
         y = tuple(yaml.load(open(p).read()) for p in upaths if os.path.isfile(p)) + y
 
-        assignments = filter(lambda m: m.find('=') != -1, mode)
-        mode = filter(lambda m: m.find('=') == -1, mode)
+        assignments = tuple(m for m in mode if m.find('=') != -1)
+        mode = tuple(m for m in mode if m.find('=') == -1)
 
         overrides = []
         for a in assignments:
             overrides.append(a.split('=', 1))
 
-        allenvs = set(chain(*(x.keys() for x in y)))
+        allenvs = set(chain(*(list(x.keys()) for x in y)))
         if len(set(mode) - allenvs) != 0:
-            raise EnvironmentError, 'Modes %s not defined anywhere' % (set(mode) - allenvs)
+            raise EnvironmentError('Modes %s not defined anywhere' % (set(mode) - allenvs))
 
         dicts = reduce(lambda it, m: chain((x.get(m, {}) for x in y), it), mode, [])
         dicts = chain(dicts, (x.get('base', {}) for x in y))
 
-        e = _mergedict(*dicts)
+        e = _merged(*dicts)
 
         for k, v in overrides:
             for pytype in (yaml.load, eval, int, float, str):
@@ -71,12 +74,12 @@ def get_env(*mode):
                 except:
                     pass
             else:
-                print >>sys.stderr, 'Failed to convert %s into anything sensible!' % v
+                print('Failed to convert %s into anything sensible!' % v, file=sys.stderr)
                 sys.exit(1)
 
             e = _setattr_rec(e, k, pyval)
 
-        e = bunchify(e)
+        e = munchify(e)
         e = _glob_filenames(e)
         e = _apply_functions(e)
         e = _coerce_none_to_string(e)
@@ -87,9 +90,9 @@ def get_env(*mode):
     return _env[mode]
 
 def _coerce_none_to_string(d):
-    new = Bunch()
+    new = Munch()
 
-    for k, v in d.iteritems():
+    for k, v in list(d.items()):
         if v is None:
             v = ''
         elif isinstance(v, dict):
@@ -100,12 +103,12 @@ def _coerce_none_to_string(d):
     return new
 
 def _glob_filenames(d):
-    new = Bunch()
+    new = Munch()
 
-    for k, v in d.iteritems():
+    for k, v in list(d.items()):
         if isinstance(v, dict):
             v = _glob_filenames(v)
-        elif isinstance(v, (str, unicode)):
+        elif isinstance(v, str):
             v = os.path.expandvars(v)
             if len(v) > 0 and v[0] in ('~', '/'):
                 v = os.path.expanduser(v)
@@ -118,7 +121,7 @@ def _glob_filenames(d):
     return new
 
 def _setattr_rec(d, k, v):
-    new = Bunch(d)
+    new = Munch(d)
 
     if k.find('.') == -1:
         new[k] = v
@@ -160,12 +163,12 @@ def _apply_functions(d, recursive=False):
 
     Currently, the only function available is `keyfile', which attempts
     to replace with a value from the currently loaded keyfile."""
-    new = Bunch()
+    new = Munch()
 
-    for k, v in d.iteritems():
+    for k, v in list(d.items()):
         if isinstance(v, dict):
             v = _apply_functions(v, recursive=True)
-        elif isinstance(v, (str, unicode)):
+        elif isinstance(v, str):
             if v.startswith('^keyfile '):
                 v = v[9:]
                 v = _get_keyfile_cache().get(v, '')
@@ -177,34 +180,15 @@ def _apply_functions(d, recursive=False):
         _clear_keyfile_cache()
     return new
 
-def _mergedict(*dicts):
+def _merge(dst, src):
+    """Merges src into dst, overwriting values if necessary."""
+    for key in src:
+        if key in dst and isinstance(dst[key], dict) and isinstance(src[key], dict):
+            merge(dst[key], src[key])
+        else:
+            dst[key] = b[key]
+    return dst
+
+def _merged(*dicts):
     """Merge dictionaries in *dicts, specified in priority order."""
-    if len(dicts) == 1:
-        return dicts[0]
-
-    def type_for_key(key):
-        types = set([type(d[key]) for d in dicts if key in d])
-        if len(types) > 1:
-            types.remove(type(None))
-        assert len(types) == 1
-        return types.pop()
-
-    new = {}
-
-    keys = set(chain(*[d.keys() for d in dicts]))
-    for t, keys in _groupby_safe(keys, type_for_key):
-        for k in keys:
-            d = filter(lambda x: k in x, dicts)
-            d = map(lambda x: x[k], d)
-
-            if t == types.DictType:
-                new[k] = _mergedict(*d)
-            else:
-                new[k] = d[0]
-
-    return new
-
-def _groupby_safe(iterable, keyfunc):
-    """Dispatching to groupby safely -- that is, we sort the input by
-    the same (required) key function before passing it to groupby."""
-    return groupby(sorted(iterable, key=keyfunc), keyfunc)
+    return reduce(_merge, reversed(dicts))
