@@ -16,6 +16,7 @@ setup(name = "clrenv",
       install_requires=[
         'PyYAML>=3.10',
         'munch>=2.2.0',
+        'future==0.16.0',
       ],
       license = "MIT",
       )
