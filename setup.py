@@ -14,7 +14,7 @@ setup(name = "clrenv",
       url = "https://github.com/ColorGenomics/clrenv",
       packages = ["clrenv"],
       install_requires=[
-        'PyYAML>=3.10',
+        'PyYAML>=4.2b1',
         'munch>=2.2.0',
         'future==0.16.0',
       ],
