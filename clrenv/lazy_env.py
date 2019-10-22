@@ -49,7 +49,7 @@ def get_env(*mode):
     if not mode in _env:
         y = (_load_current_environment(),)
         upaths = find_user_environment_paths()
-        y = tuple(yaml.load(open(p).read()) for p in upaths if os.path.isfile(p)) + y
+        y = tuple(yaml.safe_load(open(p).read()) for p in upaths if os.path.isfile(p)) + y
 
         assignments = tuple(m for m in mode if m.find('=') != -1)
         mode = tuple(m for m in mode if m.find('=') == -1)
@@ -68,7 +68,7 @@ def get_env(*mode):
         e = _merged(*dicts)
 
         for k, v in overrides:
-            for pytype in (yaml.load, eval, int, float, str):
+            for pytype in (yaml.safe_load, eval, int, float, str):
                 try:
                     pyval = pytype(v)
                     break
@@ -137,7 +137,7 @@ def _setattr_rec(d, k, v):
 
 def _load_current_environment():
     with open(find_environment_path()) as f:
-        environment = yaml.load(f.read())
+        environment = yaml.safe_load(f.read())
     return environment
 
 _kf_dict_cache = {}
