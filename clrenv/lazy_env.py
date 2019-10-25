@@ -6,14 +6,12 @@ from glob import glob
 from itertools import chain, groupby
 import shlex
 import sys
-import types
 
 from munch import Munch, munchify
 import yaml
 
 from .path import find_environment_path, find_user_environment_paths
 from functools import reduce
-
 
 class LazyEnv(object):
     def __init__(self):
@@ -152,6 +150,14 @@ def _get_keyfile_cache():
         _kf_dict_cache = clrypt.read_file_as_dict('keys', 'keys')
     return _kf_dict_cache
 
+_ssm_client = None
+def _get_ssm_client():
+    import boto3
+    global _ssm_client
+    if not _ssm_client:
+        _ssm_client = boto3.client('ssm')
+    return _ssm_client
+
 def _clear_keyfile_cache():
     global _kf_dict_cache
     _kf_dict_cache = {}
@@ -162,19 +168,26 @@ def _apply_functions(d, recursive=False):
 
       ^function rest
 
-    Currently, the only function available is `keyfile', which attempts
-    to replace with a value from the currently loaded keyfile."""
+    Available functions:
+      ^keyfile: Looks up the given value in the current environment's clrypt keyfile.
+      ^parameter: Looks up the given value in AWS Parameter store.
+    """
     new = Munch()
 
-    for k, v in list(d.items()):
-        if isinstance(v, dict):
-            v = _apply_functions(v, recursive=True)
-        elif isinstance(v, str):
-            if v.startswith('^keyfile '):
-                v = v[9:]
-                v = _get_keyfile_cache().get(v, '')
-
-        new[k] = v
+    for key, value in list(d.items()):
+        if isinstance(value, dict):
+            value = _apply_functions(value, recursive=True)
+        elif isinstance(value, str):
+            if value.startswith('^keyfile '):
+                value = value[9:]
+                value = _get_keyfile_cache().get(value, '')
+            elif value.startswith("^parameter "):
+                value = value.split(' ', 1)[1]
+                value = _get_ssm_client().get_parameter(
+                    Name=value,
+                    WithDecryption=True
+                )['Parameter']['Value']
+        new[key] = value
 
     if not recursive:
         # Cache no longer needed, clear encrypted data.
