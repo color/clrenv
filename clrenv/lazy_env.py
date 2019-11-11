@@ -3,15 +3,20 @@ from builtins import object
 import os.path
 from os import environ
 from glob import glob
-from itertools import chain, groupby
+from itertools import chain
 import shlex
 import sys
+import logging
 
 from munch import Munch, munchify
 import yaml
 
 from .path import find_environment_path, find_user_environment_paths
 from functools import reduce
+
+logger = logging.getLogger(__name__)
+OFFLINE_FLAG = 'CLRENV_OFFLINE_DEV'
+OFFLINE_VALUE = 'CLRENV_OFFLINE_PLACEHOLDER'
 
 class LazyEnv(object):
     def __init__(self):
@@ -182,11 +187,15 @@ def _apply_functions(d, recursive=False):
                 value = value[9:]
                 value = _get_keyfile_cache().get(value, '')
             elif value.startswith("^parameter "):
-                value = value.split(' ', 1)[1]
-                value = _get_ssm_client().get_parameter(
-                    Name=value,
-                    WithDecryption=True
-                )['Parameter']['Value']
+                parameter_name = value.split(' ', 1)[1]
+                if os.environ.get(OFFLINE_FLAG):
+                    logger.warning(f"Offline, using placeholder value for {parameter_name}.")
+                    value = OFFLINE_VALUE
+                else:
+                    value = _get_ssm_client().get_parameter(
+                        Name=parameter_name,
+                        WithDecryption=True
+                    )['Parameter']['Value']
         new[key] = value
 
     if not recursive:
