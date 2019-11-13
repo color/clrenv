@@ -1,13 +1,15 @@
 from __future__ import print_function
 from builtins import object
-import os.path
-from os import environ
 from glob import glob
 from itertools import chain
-import shlex
-import sys
 import logging
+import os.path
+from os import environ
+import shlex
 import socket
+import sys
+
+from botocore.exceptions import EndpointConnectionError
 
 from munch import Munch, munchify
 import yaml
@@ -196,10 +198,14 @@ def _apply_functions(d, recursive=False):
                     logger.warning(f"[{socket.gethostname()}] Offline, using placeholder value for {parameter_name}.")
                     value = OFFLINE_VALUE
                 else:
-                    value = _get_ssm_client().get_parameter(
-                        Name=parameter_name,
-                        WithDecryption=True
-                    )['Parameter']['Value']
+                    try:
+                        value = _get_ssm_client().get_parameter(
+                            Name=parameter_name,
+                            WithDecryption=True
+                        )['Parameter']['Value']
+                    except EndpointConnectionError as e:
+                        raise RuntimeError(
+                            "clrenv could not connect to AWS to fetch parameters. If you're developing locally, try setting the offline environment variable (CLRENV_OFFLINE_DEV) to use placeholder values.")
         new[key] = value
 
     if not recursive:
