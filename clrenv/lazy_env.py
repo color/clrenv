@@ -161,6 +161,11 @@ def _get_keyfile_cache():
         _kf_dict_cache = clrypt.read_file_as_dict('keys', 'keys')
     return _kf_dict_cache
 
+def _clear_keyfile_cache():
+    global _kf_dict_cache
+    _kf_dict_cache.clear()
+
+_parameter_store_key_cache = {}
 _ssm_client = None
 def _get_ssm_client():
     import boto3
@@ -169,9 +174,37 @@ def _get_ssm_client():
         _ssm_client = boto3.client('ssm')
     return _ssm_client
 
-def _clear_keyfile_cache():
-    global _kf_dict_cache
-    _kf_dict_cache = {}
+def _fetch_parameters(parameters):
+    # https://docs.aws.amazon.com/systems-manager/latest/APIReference/API_GetParameters.html#API_GetParameters_RequestSyntax
+    assert len(parameters) < 11
+    try:
+        response = _get_ssm_client().get_parameters(
+            Names=parameters,
+            WithDecryption=True
+        )
+    except EndpointConnectionError as _:
+        raise RuntimeError(
+            "clrenv could not connect to AWS to fetch parameters. If you're developing locally, try setting the offline environment variable (CLRENV_OFFLINE_DEV) to use placeholder values."
+        )
+    parameters_not_found = response.get("InvalidParameters")
+    if parameters_not_found:
+        # If any parameters are not found, raise error.
+        raise RuntimeError(f"Could not find {parameters_not_found} in Parameter Store.")
+    fetched_params = response['Parameters']
+    return fetched_params
+
+def _resolve_parameters():
+    """
+    Fetch parameters from SSM and inject into the environment.
+    """
+    global _parameter_store_key_cache
+    parameter_store_keys = list(_parameter_store_key_cache.keys())
+    for i in range(0, len(parameter_store_keys), 10):
+        # get batches of 10 at a time
+        fetched_params = _fetch_parameters(parameter_store_keys[i:i + 10])
+        for param in fetched_params:
+            env, key = _parameter_store_key_cache[param['Name']]
+            env[key] = param['Value']
 
 def _apply_functions(d, recursive=False):
     """Apply a set of functions to the given environment. Functions
@@ -184,6 +217,7 @@ def _apply_functions(d, recursive=False):
       ^parameter: Looks up the given value in AWS Parameter store.
     """
     new = Munch()
+    global _parameter_store_key_cache
 
     for key, value in list(d.items()):
         if isinstance(value, dict):
@@ -198,21 +232,17 @@ def _apply_functions(d, recursive=False):
                     logger.warning(f"[{socket.gethostname()}] Offline, using placeholder value for {parameter_name}.")
                     value = OFFLINE_VALUE
                 else:
-                    try:
-                        value = _get_ssm_client().get_parameter(
-                            Name=parameter_name,
-                            WithDecryption=True
-                        )['Parameter']['Value']
-                    except EndpointConnectionError as e:
-                        raise RuntimeError(
-                            "clrenv could not connect to AWS to fetch parameters. If you're developing locally, try setting the offline environment variable (CLRENV_OFFLINE_DEV) to use placeholder values.")
-                    except _get_ssm_client().exceptions.ParameterNotFound as e:
-                        raise RuntimeError(
-                            f"Could not find {parameter_name} in Parameter Store.")
+                    # Don't fetch the parameters here, but use a placeholder value.
+                    # Save a reference to the current environment and key.
+                    # In _resolve_parameters(), this placeholder will be replaced with the actual value.
+                    _parameter_store_key_cache[parameter_name] = (new, key)
         new[key] = value
 
     if not recursive:
+        # Resolve parameter store values
+        _resolve_parameters()
         # Cache no longer needed, clear encrypted data.
+        _parameter_store_key_cache.clear()
         _clear_keyfile_cache()
     return new
 
