@@ -206,6 +206,9 @@ def _apply_functions(d, recursive=False):
                     except EndpointConnectionError as e:
                         raise RuntimeError(
                             "clrenv could not connect to AWS to fetch parameters. If you're developing locally, try setting the offline environment variable (CLRENV_OFFLINE_DEV) to use placeholder values.")
+                    except _get_ssm_client().exceptions.ParameterNotFound as e:
+                        raise RuntimeError(
+                            f"Could not find {parameter_name} in Parameter Store.")
         new[key] = value
 
     if not recursive:
