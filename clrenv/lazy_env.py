@@ -24,6 +24,16 @@ logger = logging.getLogger(__name__)
 OFFLINE_FLAG = 'CLRENV_OFFLINE_DEV'
 OFFLINE_VALUE = 'CLRENV_OFFLINE_PLACEHOLDER'
 
+class LazyMunch(Munch):
+    """
+    Like a Munch, but values can be thunks (0-arg functions)
+    that get evaluated when called.
+    """
+    def __getattr__(self, item):
+        value = super().__getattr__(item)
+        if callable(value):
+            value = value()
+        return value
 
 class LazyEnv(object):
     def __init__(self):
@@ -100,7 +110,7 @@ def get_env(*mode):
     return _env[mode]
 
 def _coerce_none_to_string(d):
-    new = Munch()
+    new = LazyMunch()
 
     for k, v in list(d.items()):
         if v is None:
@@ -113,7 +123,7 @@ def _coerce_none_to_string(d):
     return new
 
 def _glob_filenames(d):
-    new = Munch()
+    new = LazyMunch()
 
     for k, v in list(d.items()):
         if isinstance(v, dict):
@@ -131,7 +141,7 @@ def _glob_filenames(d):
     return new
 
 def _setattr_rec(d, k, v):
-    new = Munch(d)
+    new = LazyMunch(d)
 
     if k.find('.') == -1:
         new[k] = v
@@ -173,6 +183,25 @@ def _clear_keyfile_cache():
     global _kf_dict_cache
     _kf_dict_cache = {}
 
+parameter_store_cache = {}
+def get_or_fetch_parameter(parameter_name):
+    global parameter_store_cache
+    if parameter_name not in parameter_store_cache:
+        ssm_client = _get_ssm_client()
+        try:
+            parameter_store_cache[parameter_name] = ssm_client.get_parameter(
+            Name=parameter_name,
+            WithDecryption=True
+        )['Parameter']['Value']
+        except EndpointConnectionError as _:
+            raise RuntimeError(
+                f"clrenv could not connect to AWS to fetch the parameter {parameter_name}. If you're developing locally, try setting the offline environment variable (CLRENV_OFFLINE_DEV) to use placeholder values.")
+        except ssm_client.exceptions.ParameterNotFound as _:
+            raise RuntimeError(
+                f"Could not find {parameter_name} in Parameter Store.")
+    return parameter_store_cache[parameter_name]
+
+
 def _apply_functions(d, recursive=False):
     """Apply a set of functions to the given environment. Functions
     are parsed from values of the format:
@@ -183,7 +212,7 @@ def _apply_functions(d, recursive=False):
       ^keyfile: Looks up the given value in the current environment's clrypt keyfile.
       ^parameter: Looks up the given value in AWS Parameter store.
     """
-    new = Munch()
+    new = LazyMunch()
 
     for key, value in list(d.items()):
         if isinstance(value, dict):
@@ -198,17 +227,8 @@ def _apply_functions(d, recursive=False):
                     logger.warning(f"[{socket.gethostname()}] Offline, using placeholder value for {parameter_name}.")
                     value = OFFLINE_VALUE
                 else:
-                    try:
-                        value = _get_ssm_client().get_parameter(
-                            Name=parameter_name,
-                            WithDecryption=True
-                        )['Parameter']['Value']
-                    except EndpointConnectionError as e:
-                        raise RuntimeError(
-                            "clrenv could not connect to AWS to fetch parameters. If you're developing locally, try setting the offline environment variable (CLRENV_OFFLINE_DEV) to use placeholder values.")
-                    except _get_ssm_client().exceptions.ParameterNotFound as e:
-                        raise RuntimeError(
-                            f"Could not find {parameter_name} in Parameter Store.")
+                    value = lambda: get_or_fetch_parameter(parameter_name)
+
         new[key] = value
 
     if not recursive:
