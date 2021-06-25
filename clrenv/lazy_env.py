@@ -8,6 +8,7 @@ from os import environ
 import shlex
 import socket
 import sys
+import traceback
 
 from botocore.exceptions import EndpointConnectionError
 
@@ -24,11 +25,13 @@ logger = logging.getLogger(__name__)
 OFFLINE_FLAG = 'CLRENV_OFFLINE_DEV'
 OFFLINE_VALUE = 'CLRENV_OFFLINE_PLACEHOLDER'
 
+DEBUG_MODE = environ.get('CLRENV_DEBUG', '').lower() in ('true', '1')
 
 class LazyEnv(object):
     def __init__(self):
         self.__mode = tuple(shlex.split(environ.get('CLRENV_MODE', '')))
         self.__env = None
+        self.__runtime_overrides = {}
 
     def is_set(self):
         return self.__env is not None
@@ -40,17 +43,31 @@ class LazyEnv(object):
     def get_mode(self):
         return self.__mode
 
+    def clear_runtime_overrides(self):
+        self.__runtime_overrides.clear()
+
     def __getattr__(self, key):
         if self.__env is None:
             self.__env = get_env(*self.__mode)
 
-        try:
-            return getattr(self.__env, key)
-        except AttributeError:
-            return None
+        if key in self.__runtime_overrides:
+            return self.__runtime_overrides[key]
+        return getattr(self.__env, key, None)
 
     def __getitem__(self, key):
         return self.__getattr__(key)
+
+    def __setattr__(self, key, value):
+        if key.startswith('_'):
+            return object.__setattr__(self, key, value)
+
+        print(f'Manually overriding env.{key} to {value}.', file=sys.stderr)
+        if DEBUG_MODE:
+            # Get stack and remove this frame.
+            tb = traceback.extract_stack()[:-1]
+            print("".join(traceback.format_list(tb)), file=sys.stderr)
+
+        self.__runtime_overrides[key] = value
 
 _env = {}
 def get_env(*mode):
