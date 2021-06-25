@@ -58,9 +58,12 @@ class LazyEnv(object):
         return self.__getattr__(key)
 
     def __setattr__(self, key, value):
+        # Internal fields are prefixed with a _
         if key.startswith('_'):
             return object.__setattr__(self, key, value)
 
+        # Ideally we wouldn't be overriding global state like this at all, but at least
+        # make it loud.
         print(f'Manually overriding env.{key} to {value}.', file=sys.stderr)
         if DEBUG_MODE:
             # Get stack and remove this frame.
