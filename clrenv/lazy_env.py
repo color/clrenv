@@ -64,11 +64,11 @@ class LazyEnv(object):
 
         # Ideally we wouldn't be overriding global state like this at all, but at least
         # make it loud.
-        print(f'Manually overriding env.{key} to {value}.', file=sys.stderr)
+        logger.warning(f'Manually overriding env.{key} to {value}.')
         if DEBUG_MODE:
             # Get stack and remove this frame.
             tb = traceback.extract_stack()[:-1]
-            print("".join(traceback.format_list(tb)), file=sys.stderr)
+            logger.warning("".join(traceback.format_list(tb)))
 
         self.__runtime_overrides[key] = value
 
