@@ -7,7 +7,7 @@ except:
 
 
 setup(name = "clrenv",
-      version = "0.1.7",
+      version = "0.1.8",
       description = "A tool to give easy access to environment yaml file to python.",
       author = "Color Genomics",
       author_email = "dev@getcolor.com",
