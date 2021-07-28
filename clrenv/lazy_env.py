@@ -76,9 +76,12 @@ def get_env(*mode):
     global _env
 
     if not mode in _env:
-        y = (_load_current_environment(),)
-        upaths = find_user_environment_paths()
-        y = tuple(safe_load(open(p).read()) for p in upaths if os.path.isfile(p)) + y
+        y = []
+        for path in find_user_environment_paths():
+            if os.path.isfile(path):
+                with open(path) as handle:
+                    y.append(safe_load(handle.read()))
+        y.append(_load_current_environment())
 
         assignments = tuple(m for m in mode if m.find('=') != -1)
         mode = tuple(m for m in mode if m.find('=') == -1)
