@@ -1,13 +1,11 @@
-import os
-
 try:
-  from setuptools import setup
+    from setuptools import setup
 except:
-  from distutils.core import setup
+    from distutils.core import setup
 
 
 setup(name = "clrenv",
-      version = "0.1.8",
+      version = "0.1.9",
       description = "A tool to give easy access to environment yaml file to python.",
       author = "Color Genomics",
       author_email = "dev@getcolor.com",
