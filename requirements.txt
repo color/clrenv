@@ -1,4 +1,4 @@
-PyYAML==4.2b1
+PyYAML==5.4
 munch==2.2.0
 boto3==1.5.36
 -e git+https://github.com/ColorGenomics/clrypt.git@v0.1.6#egg=clrypt
