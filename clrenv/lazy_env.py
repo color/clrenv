@@ -14,7 +14,7 @@ from botocore.exceptions import EndpointConnectionError
 from munch import Munch, munchify
 
 from .load import safe_load
-from .path import find_environment_path, find_user_environment_paths
+from .path import environment_paths
 from functools import reduce
 
 logger = logging.getLogger(__name__)
@@ -47,11 +47,10 @@ class LazyEnv(object):
         self.__runtime_overrides.clear()
 
     def __getattr__(self, key):
-        if self.__env is None:
-            self.__env = get_env(*self.__mode)
-
         if key in self.__runtime_overrides:
             return self.__runtime_overrides[key]
+        if not self.__env:
+            self.__env = get_env(*self.__mode)
         return getattr(self.__env, key, None)
 
     def __getitem__(self, key):
@@ -76,16 +75,15 @@ class LazyEnv(object):
 _env = {}
 
 
+# TODO(michael.cusack): Get the courage to rewrite all of this (or ideally replace with a 3rdparty library).
 def get_env(*mode):
     global _env
 
     if not mode in _env:
         y = []
-        for path in find_user_environment_paths():
-            if os.path.isfile(path):
-                with open(path) as handle:
-                    y.append(safe_load(handle.read()))
-        y.append(_load_current_environment())
+        for path in environment_paths():
+            with open(path) as handle:
+                y.append(safe_load(handle.read()))
 
         assignments = tuple(m for m in mode if m.find("=") != -1)
         mode = tuple(m for m in mode if m.find("=") == -1)
@@ -176,12 +174,6 @@ def _setattr_rec(d, k, v):
             setattr(new, k, v)
 
     return new
-
-
-def _load_current_environment():
-    with open(find_environment_path()) as f:
-        environment = safe_load(f.read())
-    return environment
 
 
 _kf_dict_cache = {}
