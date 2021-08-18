@@ -13,7 +13,7 @@ except ImportError:
 
 
 def safe_load(str_content):
-    """ Safely load YAML, doing so quickly with C bindings if available.
+    """Safely load YAML, doing so quickly with C bindings if available.
 
     By default, `yaml.safe_load()` uses the (slower) Python bindings.
     This method is a stand-in replacement that can be considerably faster.
