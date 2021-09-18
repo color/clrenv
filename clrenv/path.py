@@ -22,7 +22,6 @@ DEBUG_MODE = environ.get("CLRENV_DEBUG", "").lower() in ("true", "1")
 
 def _resolve_path(path):
     """Resolves a user provided path. Returns None for empty string.
-
     Does not confirm the file exists.
     """
     if not path:
@@ -35,12 +34,9 @@ def _resolve_paths(paths):
 
     Will drop values that do not exist."""
     result = []
-    if not paths:
-        return result
-
-    for path in paths.split(":"):
+    for path in (paths or '').split(":"):
         resolved = _resolve_path(path)
-        if resolved.is_file():
+        if resolved and resolved.is_file():
             result.append(resolved)
         elif DEBUG_MODE:
             logging.warning(f'Could not find "{path}" {resolved}, ignoring it.')
