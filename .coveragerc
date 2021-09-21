@@ -1,0 +1,4 @@
+[run]
+omit = 
+    clrenv/tests/*
+    setup.py
