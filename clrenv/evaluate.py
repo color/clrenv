@@ -65,10 +65,10 @@ class SubClrEnv(abc.MutableMapping):
 
         # Clrenv does not allow None values. All nulls in the yaml are coerced to ''.
         if value is None:
-            raise ValueError('Can runtime override a value to None.')
+            raise ValueError("Can runtime override a value to None.")
         # No support for nested runtime overrides. Set each field individually.
         if isinstance(value, abc.Mapping):
-            raise ValueError('Can runtime override a value to a Mapping.')
+            raise ValueError("Can runtime override a value to a Mapping.")
 
         # Ideally we wouldn't be overriding global state like this at all, but at least
         # make it loud.
@@ -130,7 +130,7 @@ class SubClrEnv(abc.MutableMapping):
         for env_var in os.environ:
             if env_var.startswith(env_var_prefix):
                 env_var = env_var[len(env_var_prefix) :]
-                subkeys.add(env_var.split('__')[0].lower())
+                subkeys.add(env_var.split("__")[0].lower())
         return subkeys
 
     def _get_raw_value(self, key):
@@ -184,10 +184,10 @@ class SubClrEnv(abc.MutableMapping):
         if attribute_path is None:
             attribute_path = self._attribute_path
         attribute_path = list(attribute_path)
-        attribute_path.insert(0, 'CLRENV')
+        attribute_path.insert(0, "CLRENV")
         if as_prefix:
-            attribute_path.append('')
-        return '__'.join(attribute_path).upper()
+            attribute_path.append("")
+        return "__".join(attribute_path).upper()
 
 
 class RootClrEnv(SubClrEnv):
@@ -195,7 +195,6 @@ class RootClrEnv(SubClrEnv):
 
     def __init__(self, paths=None):
         self._environment_paths = paths
-
         self._cached_env = None
         self._parent = None
         self._root = self

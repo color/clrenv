@@ -71,7 +71,7 @@ class EnvReader:
                 continue
             # All environment files must have a base section.
             if "base" not in config:
-                raise ValueError(f'base section missing from {config_path}')
+                raise ValueError(f"base section missing from {config_path}")
             deepmerge(result, config["base"])
             # And optionally an overlay section for the mode.
             if self.mode and self.mode in config:
@@ -81,25 +81,25 @@ class EnvReader:
         # If mode was specified it must be read.
         if self.mode and not mode_read:
             raise ValueError(
-                f'CLRENV_MODE set to {self.mode}, but no corresponding section found in any environment file.'
+                f"CLRENV_MODE set to {self.mode}, but no corresponding section found in any environment file."
             )
 
         # Post process values. Breadth-first search.
-        postprocess_queue = deque([('', result)])
+        postprocess_queue = deque([("", result)])
         while postprocess_queue:
             key_prefix, mapping = postprocess_queue.pop()
             for key, value in mapping.items():
                 # Disallow non string keys
                 if not isinstance(key, str):
-                    raise ValueError(f'Only string keys are allowed: {key_prefix}{key}')
-                if key.startswith('_'):
-                    raise ValueError(f'Keys can not start with _: {key_prefix}{key}')
+                    raise ValueError(f"Only string keys are allowed: {key_prefix}{key}")
+                if key.startswith("_"):
+                    raise ValueError(f"Keys can not start with _: {key_prefix}{key}")
                 if isinstance(value, abc.Mapping):
                     # Add to queue for post processing.
-                    postprocess_queue.append((f'{key_prefix}{key}.', value))
+                    postprocess_queue.append((f"{key_prefix}{key}.", value))
                 elif value is None:
                     # Coerce Nones to empty strings.
-                    mapping[key] = ''
+                    mapping[key] = ""
                 elif isinstance(value, str):
                     mapping[key] = self.postprocess_str(value)
 
