@@ -1,4 +1,7 @@
 [run]
+include = clrenv/*
 omit = 
     clrenv/tests/*
     setup.py
+[report]
+exclude_lines = DEBUG_MODE
