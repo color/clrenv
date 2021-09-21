@@ -3,3 +3,7 @@
 *.swp
 build
 ve
+.eggs
+*.egg-info
+.coverage
+htmlcov
