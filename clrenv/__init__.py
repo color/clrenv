@@ -1,14 +1,8 @@
-import yaml
+"""To use simply import the env variable:
 
-from .lazy_env import get_env, LazyEnv
-from .load import safe_load
-from .path import find_environment_path
+from clrenv import env
+celery_backend = env.clinical.celery.backend
+"""
+from .evaluate import RootClrEnv
 
-
-def mapping():
-    with open(find_environment_path()) as f:
-        return safe_load(f.read())["mapping"]
-
-
-env = LazyEnv()
-get_env = get_env
+env = RootClrEnv()

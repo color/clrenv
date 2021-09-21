@@ -1,32 +1,73 @@
-import os.path
+"""
+Manages environment yaml file paths.
+
+clrenv expects a base environment file (environment.yaml) and zero or more overlay
+files.
+
+Without configuration (via env vars) looks for an environment.yaml in the cwd or one of
+its parents. This can be set explicitly by setting CLRENV_PATH.
+
+Overlay files can be specified with the CLRENV_OVERLAY_PATH env var. Multiple overlays
+can be specified with a colon (:) delimiter. Overlays that do not exist will be ignored.
+
+Values in overlay files take precedence over values in the base file and mask its
+values. Note that this is a different mechanism from the base/"mode" sections in each
+file which also overlay values. See a full explanation in the docs for EnvReader#read.
+"""
+import logging
 from os import environ
+from pathlib import Path
+
+logger = logging.getLogger(__name__)
+
+DEBUG_MODE = environ.get("CLRENV_DEBUG", "").lower() in ("true", "1")
 
 
-CLRENV_PATH = environ.get("CLRENV_PATH")
-CLRENV_OVERLAY_PATH = environ.get("CLRENV_OVERLAY_PATH")
+def environment_paths():
+    """Returns a list of yaml paths that constitute the current enviroment.
+
+    Files are listed in decreasing order of precedence (overlays first). Will
+    not return an empty list. All returned path are guaranteed to exist.
+
+    Raises an exception if the base environment file can not be found.
+    """
+    result = []
+    result.extend(_resolve_paths(environ.get("CLRENV_OVERLAY_PATH")))
+    base_path = _resolve_path(environ.get("CLRENV_PATH"))
+    if not base_path:
+        base_path = _find_in_cwd_or_parents("environment.yaml")
+    if not base_path or not base_path.is_file():
+        raise ValueError(f"Base environment file could not be located. {base_path}")
+    result.append(base_path)
+    return result
 
 
-def find_environment_path(name="environment.yaml"):
-    if CLRENV_PATH:
-        return CLRENV_PATH
-    path = _recursively_find_file_path(name)
+def _resolve_path(path):
+    """Resolves a user provided path. Returns None for empty string.
+    Does not confirm the file exists.
+    """
     if not path:
-        raise Exception("%s could not be located." % name)
-    return path
+        return None
+    return Path(path).expanduser().absolute()
 
 
-def find_user_environment_paths(name="environment.user.yaml"):
-    if CLRENV_OVERLAY_PATH:
-        return CLRENV_OVERLAY_PATH.split(":")
-    path = _recursively_find_file_path(name)
-    return [path] if path else []
+def _resolve_paths(paths):
+    """Resolves a user provided, colon seperated, list of paths.
+
+    Will drop values that do not exist."""
+    result = []
+    for path in paths.split(":") if paths else []:
+        resolved = _resolve_path(path)
+        if resolved and resolved.is_file():
+            result.append(resolved)
+        elif DEBUG_MODE:
+            logging.warning(f'Could not find "{path}" {resolved}, ignoring it.')
+    return result
 
 
-def _recursively_find_file_path(name):
-    path = "."
-    while os.path.split(os.path.abspath(path))[1]:
-        dir_path = os.path.join(path, name)
-        if os.path.exists(dir_path):
-            return os.path.abspath(dir_path)
-        path = os.path.join("..", path)
-    return None
+def _find_in_cwd_or_parents(name):
+    """Finds a file with the given name starting in the cwd and working up to root."""
+    for parent in (Path().absolute() / name).parents:
+        path = parent / name
+        if path.is_file():
+            return path

@@ -1,20 +1,18 @@
-try:
-    from setuptools import setup
-except:
-    from distutils.core import setup
+from setuptools import setup
+
+requirements = ["PyYAML>=4.2", "boto3", "clrypt"]
 
 
 setup(
     name="clrenv",
-    version="0.1.9",
+    version="0.2.0",
     description="A tool to give easy access to environment yaml file to python.",
-    author="Color Genomics",
+    author="Color",
     author_email="dev@getcolor.com",
-    url="https://github.com/ColorGenomics/clrenv",
+    url="https://github.com/color/clrenv",
     packages=["clrenv"],
-    install_requires=[
-        "PyYAML>=4.2b1",
-        "munch>=2.2.0",
-    ],
+    install_requires=requirements,
+    setup_requires=["pytest-runner"],
+    tests_require=requirements + ["pytest"],
     license="MIT",
 )
