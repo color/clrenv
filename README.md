@@ -82,3 +82,25 @@ $ export CLRENV_OVERLAY_PATH=/path/to/environment.overlay.yaml
 ```
 
 `CLRENV_OVERLAY_PATH` may have multiple files separated by `:`, e.g. `/path/foo.overlay.yaml:/path/bar.overlay.yaml`.
+
+## Development
+* Create a virtualenv and activate it
+```
+python3 -m venv_clrenv <location>
+source <location>/bin/activate
+```
+* Install this package as editable (symlinked to source files)
+```
+pip install -e .
+pip install black isort
+```
+* Run the tests
+```
+$ pytest --cov
+$ mypy clrenv
+$ pytest --cov-report=term --cov-report=html --cov
+$ mypy --no-implicit-optional  --warn-redundant-casts  --warn-return-any --warn-unreachable --warn-unused-ignores --pretty --txt-report /tmp --html-report /tmp clrenv/*py
+$ cat /tmp/index.txt
+$ black .
+$ isort .
+```
