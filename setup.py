@@ -13,6 +13,6 @@ setup(
     packages=["clrenv"],
     install_requires=requirements,
     setup_requires=["pytest-runner"],
-    tests_require=requirements + ["pytest"],
+    tests_require=requirements + ["pytest", "pytest-cov"],
     license="MIT",
 )
