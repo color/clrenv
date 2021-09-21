@@ -210,9 +210,7 @@ class RootClrEnv(SubClrEnv):
 
     def _make_env(self):
         # Lazily read the environment from disk.
-        if self._environment_paths is None:
-            self._environment_paths = environment_paths()
-        return EnvReader(self._environment_paths).read()
+        return EnvReader(self._environment_paths or environment_paths()).read()
 
     def clear_runtime_overrides(self):
         """Clear any outstanding runtime overrides."""
