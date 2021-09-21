@@ -5,8 +5,8 @@ Exposes a nested MutableMapping with values that can be accessed via itemgetter
 or attribute syntax.
 
 Setting a value will add it to the runtime overrides overlay and should only be
-used in tests (or ideally never.) These runtime overrides can then be cleared
-with env.clear_runtime_overrides(), for instance in test teardown.
+used in tests (or ideally never). These runtime overrides can then be cleared
+with env.clear_runtime_overrides()- for instance in test teardown.
 
 System environmental variables can also be used to override values from yaml files.
 env.foo.bar_baz can be set with the env var CLRENV__FOO__BAR_BAZ.
@@ -167,7 +167,7 @@ class SubClrEnv(abc.MutableMapping):
         value = self._env.get(key)
 
         # If the value is absent from all three sources but the key does exist in
-        # subkeys it means this is an intermediate mode of a value set via env vars.
+        # subkeys it means this is an intermediate node of a value set via env vars.
         # Return a Mapping which will cause a SubClrEnv to be returned to the user.
         # The content of the returned mapping does not matter.
         if value is None and key in self._sub_keys:
