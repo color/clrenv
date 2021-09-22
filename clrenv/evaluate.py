@@ -37,7 +37,7 @@ DEBUG_MODE = os.environ.get("CLRENV_DEBUG", "").lower() in ("true", "1")
 
 # Access to an attribute might return a primitive or if it is not a leaf node
 # another SubClrEnv.
-Value = Union[PrimitiveValue, 'SubClrEnv']
+Value = Union[PrimitiveValue, "SubClrEnv"]
 NestedMapping = Mapping[str, Union[PrimitiveValue, Mapping]]
 
 
