@@ -3,26 +3,24 @@ Defines classes that allow environment to be evaluated as a series of attributes
 
 The environment is built from three sources (in order of priority):
 
-1) Runtime overrides. For legacy reasons we allow all env values to be set at runtime
-   using item/attribute setters. Ideally this would only be done in test code, but that
-   is not currently the case. Avoid using doing this in new code if you can.
-2)
-3) By reading a list of yaml files from disk as described in path.py. Files are read
+1) Runtime overrides. Env values to be set at runtime use
+   RootClrEnv.set_runtime_override(key_path, value). Additionally for legacy reasons
+   they can also be using item/attribute setters- avoid using these in new code if you
+   can. Runtime overrides should only be used in tests. (Not currently the case.)
+2) Environmental variables. Variables in the form of CLRENV__FOO__BAR=baz will cause
+   env.foo.bar==baz. These are evaluated at access time.
+   TODO(michael.cusack): Should these also be fixed on first env usage? Should we
+   monitor and warn changes?
+3) By reading a set of yaml files from disk as described in path.py. Files are read
    lazily when the first attribute is referenced and never reloaded.
-There are three potential sources of data (in order of priority):
-        1) Runtime overrides
-        2) Environment variables
-        3) Merged yaml files
 
 Exposes a nested MutableMapping with values that can be accessed via itemgetter
 or attribute syntax.
 
-Setting a value will add it to the runtime overrides overlay and should only be
-used in tests (or ideally never). These runtime overrides can then be cleared
-with env.clear_runtime_overrides()- for instance in test teardown.
-
-System environmental variables can also be used to override values from yaml files.
-env.foo.bar_baz can be set with the env var CLRENV__FOO__BAR_BAZ.
+Setting a value will add it to the runtime overrides overlay although this is
+discouraged in preference of RootClrEnv.set_runtime_overrides(key_path, value).
+Runtime overrides can then be cleared with env.clear_runtime_overrides()- for instance
+in test teardown.
 """
 import logging
 import os
