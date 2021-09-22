@@ -66,7 +66,7 @@ def _resolve_paths(paths: Optional[str]) -> Iterable[Path]:
     return result
 
 
-def _find_in_cwd_or_parents(name) -> Optional[Path]:
+def _find_in_cwd_or_parents(name: str) -> Optional[Path]:
     """Finds a file with the given name starting in the cwd and working up to root."""
     for parent in (Path().absolute() / name).parents:
         path = parent / name

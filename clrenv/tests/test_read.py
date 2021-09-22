@@ -1,7 +1,7 @@
 from pathlib import Path
 from types import SimpleNamespace
 
-import botocore.exceptions
+import botocore.exceptions  # type: ignore
 import pytest
 import yaml
 

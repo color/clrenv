@@ -6,18 +6,18 @@ import yaml
 try:
     # If available, use the C bindings for far, far faster loading
     # See: https://pyyaml.org/wiki/PyYAMLDocumentation
-    from yaml import CSafeLoader as SafeLoader
+    from yaml import CSafeLoader as SafeLoader  # type: ignore
 except ImportError:
     # If the C bindings aren't available, fall back to the "much slower" Python bindings
-    from yaml import SafeLoader
+    from yaml import SafeLoader  # type: ignore
 
 import logging
 import os
 from collections import abc, deque
 from typing import Any, Deque, MutableMapping, Tuple, Union, Mapping
 
-import boto3
-from botocore.exceptions import EndpointConnectionError
+import boto3  # type: ignore
+from botocore.exceptions import EndpointConnectionError  # type: ignore
 
 from .deepmerge import deepmerge
 from .path import environment_paths
