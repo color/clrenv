@@ -6,7 +6,7 @@ import yaml
 try:
     # If available, use the C bindings for far, far faster loading
     # See: https://pyyaml.org/wiki/PyYAMLDocumentation
-    from yaml import CSafeLoader as SafeLoader  # type: ignore
+    from yaml import CSafeLoader as SafeLoader
 except ImportError:
     # If the C bindings aren't available, fall back to the "much slower" Python bindings
     from yaml import SafeLoader  # type: ignore
@@ -14,9 +14,10 @@ except ImportError:
 import logging
 import os
 from collections import abc, deque
-from typing import Any, Deque, Mapping, MutableMapping, Tuple, Union
+from pathlib import Path
+from typing import Any, Deque, Iterable, Mapping, MutableMapping, Tuple, Union
 
-import boto3  # type: ignore
+import boto3
 from botocore.exceptions import EndpointConnectionError  # type: ignore
 
 from .deepmerge import deepmerge
@@ -38,8 +39,8 @@ OFFLINE_PARAMETER_VALUE = "CLRENV_OFFLINE_PLACEHOLDER"
 
 
 class EnvReader:
-    def __init__(self, environment_paths):
-        self.environment_paths = environment_paths
+    def __init__(self, environment_paths: Iterable[Path]):
+        self.environment_paths: Tuple[Path, ...] = tuple(environment_paths)
         # Don't load clrypt or ssm client unless/until needed.
         self.clrypt_keyfile = None
         self.ssm_client = None
@@ -106,7 +107,7 @@ class EnvReader:
                     postprocess_queue.append((f"{key_prefix}{key}.", value))
                 elif value is None:
                     # Coerce Nones to empty strings.
-                    mapping[key] = ""
+                    mapping[key] = ""  # type: ignore
                 elif isinstance(value, str):
                     mapping[key] = self.postprocess_str(value)
 
