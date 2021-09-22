@@ -30,7 +30,7 @@ from typing import (
 )
 
 from .path import environment_paths
-from .read import EnvReader, PrimitiveValue
+from .read import EnvReader, PrimitiveValue, NestedMapping
 
 logger = logging.getLogger(__name__)
 
@@ -39,7 +39,6 @@ DEBUG_MODE = os.environ.get("CLRENV_DEBUG", "").lower() in ("true", "1")
 # Access to an attribute might return a primitive or if it is not a leaf node
 # another SubClrEnv.
 Value = Union[PrimitiveValue, "SubClrEnv"]
-NestedMapping = Mapping[str, Union[PrimitiveValue, Mapping[str, Any]]]
 
 
 class SubClrEnv(abc.MutableMapping):

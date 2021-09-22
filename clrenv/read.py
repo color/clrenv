@@ -14,7 +14,7 @@ except ImportError:
 import logging
 import os
 from collections import abc, deque
-from typing import Any, Deque, MutableMapping, Tuple, Union
+from typing import Any, Deque, MutableMapping, Tuple, Union, Mapping
 
 import boto3
 from botocore.exceptions import EndpointConnectionError
@@ -26,7 +26,10 @@ logger = logging.getLogger(__name__)
 
 # Types that can be read or set as values of leaf nodes.
 PrimitiveValue = Union[bool, int, float, str]
-NestedMapping = MutableMapping[str, Union[PrimitiveValue, MutableMapping]]
+NestedMapping = Mapping[str, Union[PrimitiveValue, Mapping[str, Any]]]
+MutableNestedMapping = MutableMapping[
+    str, Union[PrimitiveValue, MutableMapping[str, Any]]
+]
 
 # Flag to prevent clrenv from throwing errors
 #  if it cannot connect to the Parameter Store API.
@@ -64,7 +67,7 @@ class EnvReader:
         # Whether a section for the specified mode has been read.
         mode_read = False
         # The merged config.
-        result: NestedMapping = {}
+        result: MutableNestedMapping = {}
 
         # Paths are in decending precedence so loop over in reverse for merging.
         for config_path in self.environment_paths[::-1]:
@@ -88,7 +91,8 @@ class EnvReader:
             )
 
         # Post process values. Breadth-first search.
-        postprocess_queue: Deque[Tuple[str, NestedMapping]] = deque([("", result)])
+        postprocess_queue: Deque[Tuple[str, MutableNestedMapping]] = deque()
+        postprocess_queue.append(("", result))
         while postprocess_queue:
             key_prefix, mapping = postprocess_queue.pop()
             for key, value in mapping.items():
