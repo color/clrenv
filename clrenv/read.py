@@ -14,13 +14,12 @@ except ImportError:
 import logging
 import os
 from collections import abc, deque
-from typing import Any, MutableMapping, Union, Deque, Tuple
+from typing import Any, Deque, MutableMapping, Tuple, Union
 
 import boto3
 from botocore.exceptions import EndpointConnectionError
 
 from .deepmerge import deepmerge
-
 from .path import environment_paths
 
 logger = logging.getLogger(__name__)

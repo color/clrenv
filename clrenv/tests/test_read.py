@@ -2,9 +2,10 @@ from pathlib import Path
 from types import SimpleNamespace
 
 import botocore.exceptions
-import clrenv
 import pytest
 import yaml
+
+import clrenv
 
 
 @pytest.fixture(autouse=True)

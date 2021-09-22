@@ -17,13 +17,14 @@ file which also overlay values. See a full explanation in the docs for EnvReader
 import logging
 from os import environ
 from pathlib import Path
+from typing import Iterable, List, Optional
 
 logger = logging.getLogger(__name__)
 
 DEBUG_MODE = environ.get("CLRENV_DEBUG", "").lower() in ("true", "1")
 
 
-def environment_paths():
+def environment_paths() -> Iterable[Path]:
     """Returns a list of yaml paths that constitute the current enviroment.
 
     Files are listed in decreasing order of precedence (overlays first). Will
@@ -31,7 +32,7 @@ def environment_paths():
 
     Raises an exception if the base environment file can not be found.
     """
-    result = []
+    result: List[Path] = []
     result.extend(_resolve_paths(environ.get("CLRENV_OVERLAY_PATH")))
     base_path = _resolve_path(environ.get("CLRENV_PATH"))
     if not base_path:
@@ -42,7 +43,7 @@ def environment_paths():
     return result
 
 
-def _resolve_path(path):
+def _resolve_path(path: Optional[str]) -> Optional[Path]:
     """Resolves a user provided path. Returns None for empty string.
     Does not confirm the file exists.
     """
@@ -51,7 +52,7 @@ def _resolve_path(path):
     return Path(path).expanduser().absolute()
 
 
-def _resolve_paths(paths):
+def _resolve_paths(paths: Optional[str]) -> Iterable[Path]:
     """Resolves a user provided, colon seperated, list of paths.
 
     Will drop values that do not exist."""
@@ -65,9 +66,10 @@ def _resolve_paths(paths):
     return result
 
 
-def _find_in_cwd_or_parents(name):
+def _find_in_cwd_or_parents(name) -> Optional[Path]:
     """Finds a file with the given name starting in the cwd and working up to root."""
     for parent in (Path().absolute() / name).parents:
         path = parent / name
         if path.is_file():
             return path
+    return None
