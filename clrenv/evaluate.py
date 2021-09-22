@@ -16,21 +16,11 @@ import os
 import traceback
 from collections import abc
 from pathlib import Path
-from typing import (
-    Any,
-    Iterable,
-    Iterator,
-    List,
-    Mapping,
-    MutableMapping,
-    Optional,
-    Set,
-    Tuple,
-    Union,
-)
+from typing import (Any, Iterable, Iterator, List, Mapping, MutableMapping,
+                    Optional, Set, Tuple, Union)
 
 from .path import environment_paths
-from .read import EnvReader, PrimitiveValue, NestedMapping
+from .read import EnvReader, NestedMapping, PrimitiveValue
 
 logger = logging.getLogger(__name__)
 
@@ -197,7 +187,7 @@ class SubClrEnv(abc.MutableMapping):
         return self._attribute_path + (key,)
 
     def _make_env_var_name(
-        self, attribute_path: Iterable[str] = None, as_prefix: bool = False
+        self, attribute_path: Optional[Iterable[str]] = None, as_prefix: bool = False
     ) -> str:
         """Returns the env var name that can be used to set the given attribute path."""
         if attribute_path is None:

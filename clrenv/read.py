@@ -14,7 +14,7 @@ except ImportError:
 import logging
 import os
 from collections import abc, deque
-from typing import Any, Deque, MutableMapping, Tuple, Union, Mapping
+from typing import Any, Deque, Mapping, MutableMapping, Tuple, Union
 
 import boto3  # type: ignore
 from botocore.exceptions import EndpointConnectionError  # type: ignore
