@@ -16,8 +16,17 @@ import os
 import traceback
 from collections import abc
 from pathlib import Path
-from typing import (Iterable, Iterator, List, Mapping, MutableMapping,
-                    Optional, Set, Tuple, Union)
+from typing import (
+    Iterable,
+    Iterator,
+    List,
+    Mapping,
+    MutableMapping,
+    Optional,
+    Set,
+    Tuple,
+    Union,
+)
 
 from .path import environment_paths
 from .read import EnvReader, PrimitiveValue
