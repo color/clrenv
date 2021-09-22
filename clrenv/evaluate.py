@@ -1,12 +1,11 @@
 """
 Defines classes that allow environment to be evaluated as a series of attributes.
 
-The environment is built from three sources (in order of priority):
+Exposes a nested MutableMapping with values that can be accessed via itemgetter
+or attribute syntax.
 
-1) Runtime overrides. Env values to be set at runtime use
-   RootClrEnv.set_runtime_override(key_path, value). Additionally for legacy reasons
-   they can also be using item/attribute setters- avoid using these in new code if you
-   can. Runtime overrides should only be used in tests. (Not currently the case.)
+The environment is built from three sources (in order of priority):
+1) Runtime overrides.
 2) Environmental variables. Variables in the form of CLRENV__FOO__BAR=baz will cause
    env.foo.bar==baz. These are evaluated at access time.
    TODO(michael.cusack): Should these also be fixed on first env usage? Should we
@@ -14,12 +13,11 @@ The environment is built from three sources (in order of priority):
 3) By reading a set of yaml files from disk as described in path.py. Files are read
    lazily when the first attribute is referenced and never reloaded.
 
-Exposes a nested MutableMapping with values that can be accessed via itemgetter
-or attribute syntax.
-
-Setting a value will add it to the runtime overrides overlay although this is
-discouraged in preference of RootClrEnv.set_runtime_overrides(key_path, value).
-Runtime overrides can then be cleared with env.clear_runtime_overrides()- for instance
+# Runtime Overrides
+RootClrEnv.set_runtime_override(key_path, value) allows you to override values at
+runtime. Using this is encouraged over setting a value using attribute setters, but
+discouraged in preference of only doing to in tests and using unittest.mock.patch.
+Runtime overrides can be cleared with env.clear_runtime_overrides()- for instance
 in test teardown.
 """
 import logging
@@ -229,17 +227,16 @@ class RootClrEnv(SubClrEnv):
         return EnvReader(self._environment_paths or environment_paths()).read()
 
     def clear_runtime_overrides(self):
-        """Clear any outstanding runtime overrides."""
+        """Clear all runtime overrides."""
         self._runtime_overrides.clear()
 
     def set_runtime_override(self, key_path, value):
         """Sets a runtime override.
 
-        This is the proper way to set override an env value at runtime. This should
-        only be done in tests or ideally if you are really sure you want to. It is
-        difficult to predict the consequences of changing this this way.
+        Only do this in tests and ideally use unittest.mock.patch or monkeypath.setattr
+        instead.
 
-        Notice that this is only on the root node."""
+        Notice that this method is only on the root node."""
         if not key_path:
             raise ValueError('key_path can not be empty.')
         if isinstance(key_path, str):
