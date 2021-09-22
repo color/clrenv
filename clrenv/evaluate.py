@@ -16,7 +16,8 @@ The environment is built from three sources (in order of priority):
 # Runtime Overrides
 RootClrEnv.set_runtime_override(key_path, value) allows you to override values at
 runtime. Using this is encouraged over setting a value using attribute setters, but
-discouraged in preference of only doing to in tests and using unittest.mock.patch.
+discouraged in preference of only doing so in tests and using unittest.mock.patch
+or monkeypath.setattr instead.
 Runtime overrides can be cleared with env.clear_runtime_overrides()- for instance
 in test teardown.
 """
