@@ -88,8 +88,54 @@ def test_attributeerror(default_env):
 
 
 def test_runtime_override(default_env):
+    assert default_env.a == 'b'
+    default_env.set_runtime_override('a', 'z')
+    assert default_env.a == 'z'
+    default_env.clear_runtime_overrides()
+    assert default_env.a == 'b'
+
+
+def test_runtime_override_empty_path(default_env):
+    with pytest.raises(ValueError):
+        default_env.set_runtime_override([], 'aaa')
+
+
+def test_runtime_override_nonprimitive(default_env):
+    with pytest.raises(ValueError):
+        default_env.set_runtime_override('a', [])
+        default_env.set_runtime_override('a', {})
+        default_env.set_runtime_override('a', object())
+
+
+def test_nested_runtime_override(default_env):
+    assert default_env.aa.bb == 'cc'
+    default_env.set_runtime_override(('aa', 'bb'), "zz")
+    assert default_env.aa.bb == "zz"
+    default_env.set_runtime_override('aa.bb', "zzz")
+    assert default_env.aa.bb == "zzz"
+
+    default_env.clear_runtime_overrides()
+    assert default_env.aa.bb == 'cc'
+
+
+def test_runtime_override_as_attributes(default_env):
+    assert default_env.a == 'b'
+    default_env.a = 'z'
+    assert default_env.a == 'z'
+
+    assert default_env.aa.bb == 'cc'
     default_env.aa.bb = "zz"
     assert default_env.aa.bb == "zz"
+
+
+def test_runtime_override_as_items(default_env):
+    assert default_env['a'] == 'b'
+    default_env['a'] = 'z'
+    assert default_env['a'] == 'z'
+
+    assert default_env['aa']['bb'] == 'cc'
+    default_env['aa']['bb'] = "zz"
+    assert default_env['aa']['bb'] == "zz"
 
     # Delete it
     del default_env.aa["bb"]
@@ -129,3 +175,10 @@ def test_env_var(monkeypatch, default_env):
     assert default_env.z == "w"
     default_env.clear_runtime_overrides()
     assert default_env.z == "z"
+
+
+def test_underscored_keys(default_env):
+    with pytest.raises(KeyError):
+        default_env['__env']
+    with pytest.raises(AttributeError):
+        getattr(default_env.__unknown)
