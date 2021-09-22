@@ -15,7 +15,7 @@ import logging
 import os
 from collections import abc, deque
 from pathlib import Path
-from typing import Any, Deque, Iterable, Mapping, MutableMapping, Tuple, Union
+from typing import Any, Deque, Iterable, Mapping, MutableMapping, Optional, Tuple, Union
 
 import boto3
 from botocore.exceptions import EndpointConnectionError  # type: ignore
@@ -41,11 +41,7 @@ OFFLINE_PARAMETER_VALUE = "CLRENV_OFFLINE_PLACEHOLDER"
 class EnvReader:
     def __init__(self, environment_paths: Iterable[Path]):
         self.environment_paths: Tuple[Path, ...] = tuple(environment_paths)
-        # Don't load clrypt or ssm client unless/until needed.
-        self.clrypt_keyfile = None
-        self.ssm_client = None
-
-        self.mode = os.environ.get("CLRENV_MODE")
+        self.mode: Optional[str] = os.environ.get("CLRENV_MODE")
 
     def read(self) -> NestedMapping:
         """Reads, merges and post-processes environment from disk.
@@ -72,7 +68,7 @@ class EnvReader:
 
         # Paths are in decending precedence so loop over in reverse for merging.
         for config_path in self.environment_paths[::-1]:
-            config = safe_load(config_path.read_text())
+            config: Mapping[str, Any] = safe_load(config_path.read_text())
             # safe_load will return None if the file is empty
             if not config:
                 continue
@@ -129,31 +125,31 @@ class EnvReader:
 
         return value
 
-    def evaluate_clrypt_key(self, name):
+    def evaluate_clrypt_key(self, name: str) -> str:
         """Returns a value from clrypt."""
-        if self.clrypt_keyfile is None:
+        if not hasattr(self, "clrypt_keyfile"):
             # Not all environments use clrypt, delay import until it is needed.
             logger.info("Loading clrypt for clrenv")
             import clrypt
 
             self.clrypt_keyfile = clrypt.read_file_as_dict("keys", "keys")
 
-        return self.clrypt_keyfile.get(name, "")
+        return str(self.clrypt_keyfile.get(name, ""))
 
-    def evaluate_ssm_parameter(self, name):
+    def evaluate_ssm_parameter(self, name: str) -> str:
         """Returns a value from aws ssm parameter store."""
         if os.environ.get(OFFLINE_PARAMETER_FLAG):
             logger.warning(f"Offline, using placeholder value for {name}.")
             return OFFLINE_PARAMETER_VALUE
 
-        if self.ssm_client is None:
+        if not hasattr(self, "ssm_client"):
             # Not all environments use ssm, delay import until it is needed.
             logger.info("Loading SSM ParameterStore for clrenv")
             self.ssm_client = boto3.client("ssm")
 
         try:
             parameter = self.ssm_client.get_parameter(Name=name, WithDecryption=True)
-            return parameter["Parameter"]["Value"]
+            return str(parameter["Parameter"]["Value"])
         except EndpointConnectionError:
             logger.error(
                 "clrenv could not connect to AWS to fetch parameters. "
@@ -165,7 +161,7 @@ class EnvReader:
             raise
 
 
-def safe_load(str_content):
+def safe_load(str_content: str):
     """Safely load YAML, doing so quickly with C bindings if available.
 
     By default, `yaml.safe_load()` uses the (slower) Python bindings.
