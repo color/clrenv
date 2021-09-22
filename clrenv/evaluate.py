@@ -16,8 +16,18 @@ import os
 import traceback
 from collections import abc
 from pathlib import Path
-from typing import (Any, Iterable, Iterator, List, Mapping, MutableMapping,
-                    Optional, Set, Tuple, Union)
+from typing import (
+    Any,
+    Iterable,
+    Iterator,
+    List,
+    Mapping,
+    MutableMapping,
+    Optional,
+    Set,
+    Tuple,
+    Union,
+)
 
 from .path import environment_paths
 from .read import EnvReader, NestedMapping, PrimitiveValue
@@ -184,7 +194,7 @@ class SubClrEnv(abc.MutableMapping):
 
     def _sub_attribute_path(self, key: str) -> Tuple[str]:
         """Returns an attribute path with the given key appended."""
-        return self._attribute_path + (key,)
+        return (*self._attribute_path, key)
 
     def _make_env_var_name(
         self, attribute_path: Optional[Iterable[str]] = None, as_prefix: bool = False
