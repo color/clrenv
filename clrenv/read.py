@@ -14,7 +14,7 @@ except ImportError:
 import logging
 import os
 from collections import abc, deque
-from typing import Any, Dict
+from typing import Any, MutableMapping, Union, Deque, Tuple
 
 import boto3
 from botocore.exceptions import EndpointConnectionError
@@ -24,6 +24,10 @@ from .deepmerge import deepmerge
 from .path import environment_paths
 
 logger = logging.getLogger(__name__)
+
+# Types that can be read or set as values of leaf nodes.
+PrimitiveValue = Union[bool, int, float, str]
+NestedMapping = MutableMapping[str, Union[PrimitiveValue, MutableMapping]]
 
 # Flag to prevent clrenv from throwing errors
 #  if it cannot connect to the Parameter Store API.
@@ -40,7 +44,7 @@ class EnvReader:
 
         self.mode = os.environ.get("CLRENV_MODE")
 
-    def read(self) -> Dict[str, Dict[str, Any]]:
+    def read(self) -> NestedMapping:
         """Reads, merges and post-processes environment from disk.
 
         Clrenv can read from multiple files. Each file must contains a "base" section
@@ -61,7 +65,7 @@ class EnvReader:
         # Whether a section for the specified mode has been read.
         mode_read = False
         # The merged config.
-        result = {}
+        result: NestedMapping = {}
 
         # Paths are in decending precedence so loop over in reverse for merging.
         for config_path in self.environment_paths[::-1]:
@@ -85,7 +89,7 @@ class EnvReader:
             )
 
         # Post process values. Breadth-first search.
-        postprocess_queue = deque([("", result)])
+        postprocess_queue: Deque[Tuple[str, NestedMapping]] = deque([("", result)])
         while postprocess_queue:
             key_prefix, mapping = postprocess_queue.pop()
             for key, value in mapping.items():

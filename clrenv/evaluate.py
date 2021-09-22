@@ -15,26 +15,43 @@ import logging
 import os
 import traceback
 from collections import abc
+from pathlib import Path
+from typing import (
+    Iterator,
+    MutableMapping,
+    Mapping,
+    Set,
+    Union,
+    Tuple,
+    Optional,
+    Iterable,
+    List,
+)
 
 from .path import environment_paths
-from .read import EnvReader
+from .read import EnvReader, PrimitiveValue
 
 logger = logging.getLogger(__name__)
 
 DEBUG_MODE = os.environ.get("CLRENV_DEBUG", "").lower() in ("true", "1")
 
+# Access to an attribute might return a primitive or if it is not a leaf node
+# another SubClrEnv.
+Value = Union[PrimitiveValue, 'SubClrEnv']
+NestedMapping = Mapping[str, Union[PrimitiveValue, Mapping]]
+
 
 class SubClrEnv(abc.MutableMapping):
-    def __init__(self, parent, next_attribute_name):
+    def __init__(self, parent, next_attribute_name: str):
         # The RootClrEnv class omits these, but SubClrEnv needs them.
         assert parent and next_attribute_name
 
-        self._cached_env = None
+        self._cached_env: Optional[NestedMapping] = None
         self._parent = parent
         self._attribute_path = parent._sub_attribute_path(next_attribute_name)
         self._root = parent._root
 
-    def __getitem__(self, key):
+    def __getitem__(self, key: str) -> Value:
         """Allows access with item getter, like a Mapping."""
         value = self._get_raw_value(key)
 
@@ -49,14 +66,14 @@ class SubClrEnv(abc.MutableMapping):
         # Return the actual value.
         return value
 
-    def __getattr__(self, key):
+    def __getattr__(self, key: str) -> Value:
         """Allows access as attributes."""
         try:
             return self[key]
         except KeyError as e:
             raise AttributeError(str(e))
 
-    def __setitem__(self, key, value):
+    def __setitem__(self, key: str, value: PrimitiveValue):
         """Sets a runtime override as an item."""
 
         # Internal fields are prefixed with a _ and should be treated normally.
@@ -84,15 +101,15 @@ class SubClrEnv(abc.MutableMapping):
             self._root._runtime_overrides[self._attribute_path] = {}
         self._root._runtime_overrides[self._attribute_path][key] = value
 
-    def __setattr__(self, key, value):
+    def __setattr__(self, key: str, value: PrimitiveValue):
         """Sets a runtime override as an attribute."""
         self[key] = value
 
-    def __delitem__(self, key):
+    def __delitem__(self, key: str):
         """Only support deleting runtime overrides."""
         del self._root._runtime_overrides[self._attribute_path][key]
 
-    def __iter__(self):
+    def __iter__(self) -> Iterator[str]:
         return iter(self._sub_keys)
 
     def __len__(self):
@@ -101,13 +118,13 @@ class SubClrEnv(abc.MutableMapping):
     def __repr__(self):
         return f"ClrEnv[{'.'.join(self._attribute_path)}]={self._env}"
 
-    def _make_env(self):
+    def _make_env(self) -> NestedMapping:
         """Creates an env map relative to this path."""
         # Get subtree of parent env.
         return self._parent._env.get(self._attribute_path[-1], {})
 
     @property
-    def _env(self):
+    def _env(self) -> NestedMapping:
         """Returns the env map relative to this path.
 
         Using this function allows lazy evaluation."""
@@ -116,7 +133,7 @@ class SubClrEnv(abc.MutableMapping):
         return self._cached_env
 
     @property
-    def _sub_keys(self):
+    def _sub_keys(self) -> Set[str]:
         """Returns the set of all valid keys under this node."""
         # Keys in the merged env.
         subkeys = set(self._env.keys())
@@ -133,7 +150,7 @@ class SubClrEnv(abc.MutableMapping):
                 subkeys.add(env_var.split("__")[0].lower())
         return subkeys
 
-    def _get_raw_value(self, key):
+    def _get_raw_value(self, key: str) -> Union[PrimitiveValue, Mapping, None]:
         """Returns the stored value for the given key.
 
         There are three potential sources of data (in order of priority):
@@ -175,11 +192,13 @@ class SubClrEnv(abc.MutableMapping):
 
         return value
 
-    def _sub_attribute_path(self, key):
+    def _sub_attribute_path(self, key: str) -> Tuple[str]:
         """Returns an attribute path with the given key appended."""
         return self._attribute_path + (key,)
 
-    def _make_env_var_name(self, attribute_path=None, as_prefix=False):
+    def _make_env_var_name(
+        self, attribute_path: Iterable[str] = None, as_prefix: bool = False
+    ) -> str:
         """Returns the env var name that can be used to set the given attribute path."""
         if attribute_path is None:
             attribute_path = self._attribute_path
@@ -193,7 +212,7 @@ class SubClrEnv(abc.MutableMapping):
 class RootClrEnv(SubClrEnv):
     """Special case of SubClrEnv for the root node."""
 
-    def __init__(self, paths=None):
+    def __init__(self, paths: Optional[List[Path]] = None):
         self._environment_paths = paths
         self._cached_env = None
         self._parent = None
@@ -206,9 +225,11 @@ class RootClrEnv(SubClrEnv):
         # first key is the parent attribute path tuple and the second key is the leaf
         # attribute name. This allows for efficent lookup for subkeys.
         # env.a.b.c = 'd' ==> _runtime_overrides = {('a', 'b'): {'c': 'd'}}
-        self._runtime_overrides = {}
+        self._runtime_overrides: MutableMapping[
+            Tuple[str], MutableMapping[str, PrimitiveValue]
+        ] = {}
 
-    def _make_env(self):
+    def _make_env(self) -> NestedMapping:
         # Lazily read the environment from disk.
         return EnvReader(self._environment_paths or environment_paths()).read()
 

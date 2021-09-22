@@ -14,7 +14,7 @@ def deepmerge(dst: MutableMapping[str, Any], src: Mapping[str, Any]):
         _dst, _src = to_merge.pop()
         for key, src_value in _src.items():
             dst_value = _dst.get(key)
-            if isinstance(dst_value, abc.Mapping) and isinstance(
+            if isinstance(dst_value, abc.MutableMapping) and isinstance(
                 src_value, abc.Mapping
             ):
                 to_merge.append((dst_value, src_value))
