@@ -17,15 +17,15 @@ file which also overlay values. See a full explanation in the docs for EnvReader
 import logging
 from os import environ
 from pathlib import Path
-from typing import Iterable, List, Optional
+from typing import Iterable, List, Optional, Tuple
 
 logger = logging.getLogger(__name__)
 
 DEBUG_MODE = environ.get("CLRENV_DEBUG", "").lower() in ("true", "1")
 
 
-def environment_paths() -> Iterable[Path]:
-    """Returns a list of yaml paths that constitute the current enviroment.
+def environment_paths() -> Tuple[Path, ...]:
+    """Returns a sequence of yaml file paths that constitute the current enviroment.
 
     Files are listed in decreasing order of precedence (overlays first). Will
     not return an empty list. All returned path are guaranteed to exist.
@@ -40,7 +40,7 @@ def environment_paths() -> Iterable[Path]:
     if not base_path or not base_path.is_file():
         raise ValueError(f"Base environment file could not be located. {base_path}")
     result.append(base_path)
-    return result
+    return tuple(result)
 
 
 def _resolve_path(path: Optional[str]) -> Optional[Path]:

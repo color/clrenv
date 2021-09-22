@@ -13,7 +13,7 @@ def test_custom_base(tmp_path, monkeypatch):
     custom_path.parent.mkdir()
     custom_path.write_text("data")
     monkeypatch.setenv("CLRENV_PATH", str(custom_path))
-    assert clrenv.path.environment_paths() == [custom_path]
+    assert clrenv.path.environment_paths() == (custom_path,)
 
 
 def test_missing_base(tmp_path, monkeypatch):
@@ -33,8 +33,8 @@ def test_overlay(tmp_path, monkeypatch):
     overlay_path1.write_text("data")
     overlay_path2.write_text("data2")
     monkeypatch.setenv("CLRENV_OVERLAY_PATH", f"{overlay_path1}:{overlay_path2}")
-    assert clrenv.path.environment_paths() == [
+    assert clrenv.path.environment_paths() == (
         overlay_path1,
         overlay_path2,
         env_path,
-    ]
+    )
