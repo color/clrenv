@@ -8,8 +8,8 @@ The environment is built from three sources (in order of priority):
 1) Runtime overrides.
 2) Environmental variables. Variables in the form of CLRENV__FOO__BAR=baz will cause
    env.foo.bar==baz. These are evaluated at access time.
-   TODO(michael.cusack): Should these also be fixed on first env usage? Should we
-   monitor and warn changes?
+   TODO(michael.cusack): Should these also be fixed on the state at first env usage?
+   Should we monitor and warn changes?
 3) By reading a set of yaml files from disk as described in path.py. Files are read
    lazily when the first attribute is referenced and never reloaded.
 
@@ -26,8 +26,19 @@ import os
 import traceback
 from collections import abc
 from pathlib import Path
-from typing import (Any, Iterable, Iterator, List, Mapping, MutableMapping,
-                    Optional, Sequence, Set, Tuple, Union)
+from typing import (
+    Any,
+    Iterable,
+    Iterator,
+    List,
+    Mapping,
+    MutableMapping,
+    Optional,
+    Sequence,
+    Set,
+    Tuple,
+    Union,
+)
 
 from .path import environment_paths
 from .read import EnvReader, NestedMapping, PrimitiveValue
