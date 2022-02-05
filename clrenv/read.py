@@ -15,22 +15,19 @@ import logging
 import os
 from collections import abc, deque
 from pathlib import Path
-from typing import Any, Deque, Iterable, Mapping, MutableMapping, Optional, Tuple, Union
+from typing import Any, Deque, Iterable, Mapping, Optional, Tuple
 
 import boto3
 from botocore.exceptions import EndpointConnectionError  # type: ignore
 
 from .deepmerge import deepmerge
 from .path import environment_paths
+from .types import MutableNestedMapping, NestedMapping, check_valid_leaf_value
 
 logger = logging.getLogger(__name__)
 
 # Types that can be read or set as values of leaf nodes.
-PrimitiveValue = Union[bool, int, float, str]
-NestedMapping = Mapping[str, Union[PrimitiveValue, Mapping[str, Any]]]
-MutableNestedMapping = MutableMapping[
-    str, Union[PrimitiveValue, MutableMapping[str, Any]]
-]
+
 
 # Flag to prevent clrenv from throwing errors
 #  if it cannot connect to the Parameter Store API.
@@ -106,6 +103,8 @@ class EnvReader:
                     mapping[key] = ""  # type: ignore
                 elif isinstance(value, str):
                     mapping[key] = self.postprocess_str(value)
+                else:
+                    check_valid_leaf_value(key_prefix + key, value)
 
         return result
 
