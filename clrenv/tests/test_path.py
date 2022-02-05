@@ -1,6 +1,5 @@
-import pytest
-
 import clrenv
+import pytest
 
 
 @pytest.fixture(autouse=True)

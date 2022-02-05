@@ -26,6 +26,9 @@ from .path import environment_paths
 logger = logging.getLogger(__name__)
 
 # Types that can be read or set as values of leaf nodes.
+
+# PrimitiveValues unofficially also could be a List[Union[bool, int, float, str]], but this
+# is discouraged.
 PrimitiveValue = Union[bool, int, float, str]
 NestedMapping = Mapping[str, Union[PrimitiveValue, Mapping[str, Any]]]
 MutableNestedMapping = MutableMapping[
@@ -106,6 +109,12 @@ class EnvReader:
                     mapping[key] = ""  # type: ignore
                 elif isinstance(value, str):
                     mapping[key] = self.postprocess_str(value)
+                elif not isinstance(value, (float, bool, int, list)):
+                    # TODO(michael.cusack): Stop supporting lists to we can support
+                    # setting everything with env vars.
+                    raise ValueError(
+                        f"Non primitive value type: {key_prefix}{key}={value}"
+                    )
 
         return result
 

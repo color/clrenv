@@ -27,7 +27,6 @@ import traceback
 from collections import abc
 from pathlib import Path
 from typing import (
-    Any,
     Iterable,
     Iterator,
     List,
@@ -250,8 +249,11 @@ class RootClrEnv(SubClrEnv):
             parent = parent[name]
 
         # No support for nested runtime overrides. Only allow primitives.
-        if not isinstance(value, PrimitiveValue.__args__):  # type: ignore
-            raise ValueError("Env values must be one of {str, int, float, boolean}.")
+        allowed_types = (*PrimitiveValue.__args__, list)
+        if not isinstance(value, allowed_types):  # type: ignore
+            raise ValueError(
+                f"Env values must be one of {allowed_types}: {type(value)}: {value}."
+            )
 
         # Ideally we wouldn't be overriding global state like this at all, but at least
         # make it loud.
