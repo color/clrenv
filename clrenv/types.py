@@ -9,8 +9,10 @@ MutableNestedMapping = MutableMapping[str, Union[LeafValue, MutableMapping[str, 
 PRIMITIVE_TYPES = (bool, int, float, str)
 
 
-def check_valid_leaf_value(key, value: Any) -> None:
-    """Returns whether the"""
+def check_valid_leaf_value(key: Any, value: Any) -> None:
+    """Raises a ValueError is the value is not a valid type.
+
+    key is only used for the error message."""
     if isinstance(value, PRIMITIVE_TYPES):
         return
     if isinstance(value, list) and all(isinstance(_, PRIMITIVE_TYPES) for _ in value):
