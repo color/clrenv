@@ -15,25 +15,19 @@ import logging
 import os
 from collections import abc, deque
 from pathlib import Path
-from typing import Any, Deque, Iterable, Mapping, MutableMapping, Optional, Tuple, Union
+from typing import Any, Deque, Iterable, Mapping, Optional, Tuple
 
 import boto3
 from botocore.exceptions import EndpointConnectionError  # type: ignore
 
 from .deepmerge import deepmerge
 from .path import environment_paths
+from .types import MutableNestedMapping, NestedMapping, check_valid_leaf_value
 
 logger = logging.getLogger(__name__)
 
 # Types that can be read or set as values of leaf nodes.
 
-# PrimitiveValues unofficially also could be a List[Union[bool, int, float, str]], but this
-# is discouraged.
-PrimitiveValue = Union[bool, int, float, str]
-NestedMapping = Mapping[str, Union[PrimitiveValue, Mapping[str, Any]]]
-MutableNestedMapping = MutableMapping[
-    str, Union[PrimitiveValue, MutableMapping[str, Any]]
-]
 
 # Flag to prevent clrenv from throwing errors
 #  if it cannot connect to the Parameter Store API.
@@ -109,12 +103,8 @@ class EnvReader:
                     mapping[key] = ""  # type: ignore
                 elif isinstance(value, str):
                     mapping[key] = self.postprocess_str(value)
-                elif not isinstance(value, (*PrimitiveValue.__args__, list)):
-                    # TODO(michael.cusack): Stop supporting lists to we can support
-                    # setting everything with env vars.
-                    raise ValueError(
-                        f"Non primitive value type: {key_prefix}{key}={value}"
-                    )
+                else:
+                    check_valid_leaf_value(key_prefix + key, value)
 
         return result
 

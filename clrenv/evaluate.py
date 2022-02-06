@@ -38,15 +38,10 @@ from typing import (
     Tuple,
     Union,
 )
-from .types import (
-    LeafValue,
-    NestedMapping,
-    MutableNestedMapping,
-    check_valid_leaf_value,
-)
 
 from .path import environment_paths
-from .read import EnvReader, NestedMapping, LeafValue
+from .read import EnvReader
+from .types import LeafValue, NestedMapping, check_valid_leaf_value
 
 logger = logging.getLogger(__name__)
 
@@ -247,7 +242,7 @@ class RootClrEnv(SubClrEnv):
         if not key_path:
             raise ValueError("key_path can not be empty.")
         # No support for nested runtime overrides. Only allow primitives.
-        check_valid_leaf_value(key_prefix, value)
+        check_valid_leaf_value(key_path, value)
 
         if isinstance(key_path, str):
             key_path = key_path.split(".")
