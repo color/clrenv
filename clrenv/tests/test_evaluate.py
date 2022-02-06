@@ -1,8 +1,9 @@
 import functools
 
-import clrenv
 import pytest
 import yaml
+
+import clrenv
 
 
 @pytest.fixture(autouse=True)
