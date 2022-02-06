@@ -109,7 +109,7 @@ class EnvReader:
                     mapping[key] = ""  # type: ignore
                 elif isinstance(value, str):
                     mapping[key] = self.postprocess_str(value)
-                elif not isinstance(value, (float, bool, int, list)):
+                elif not isinstance(value, (*PrimitiveValue.__args__, list)):
                     # TODO(michael.cusack): Stop supporting lists to we can support
                     # setting everything with env vars.
                     raise ValueError(
