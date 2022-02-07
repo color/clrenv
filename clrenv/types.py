@@ -1,5 +1,11 @@
 from typing import Any, List, Mapping, MutableMapping, Union
 
+"""Defines type annotations for use in clrenv.
+
+Ideally we would only allow str leaf values so that they can be migrated to an env
+var based system. For now we must supports more complex values.
+"""
+
 # Type that can be read or set as values of leaf nodes.
 LeafValue = Union[bool, int, float, str, List[Union[bool, int, float, str]]]
 # Type of a non leaf node.
