@@ -1,6 +1,6 @@
 from setuptools import setup
 
-requirements = ["PyYAML>=4.2", "boto3>=1.15.18", "clrypt"]
+requirements = ["PyYAML>=4.2", "boto3>=1.15.18"]
 
 
 setup(
