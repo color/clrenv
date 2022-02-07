@@ -27,7 +27,6 @@ import traceback
 from collections import abc
 from pathlib import Path
 from typing import (
-    Any,
     Iterable,
     Iterator,
     List,
@@ -41,7 +40,8 @@ from typing import (
 )
 
 from .path import environment_paths
-from .read import EnvReader, NestedMapping, PrimitiveValue
+from .read import EnvReader
+from .types import LeafValue, NestedMapping, check_valid_leaf_value
 
 logger = logging.getLogger(__name__)
 
@@ -49,7 +49,7 @@ DEBUG_MODE = os.environ.get("CLRENV_DEBUG", "").lower() in ("true", "1")
 
 # Access to an attribute might return a primitive or if it is not a leaf node
 # another SubClrEnv.
-Value = Union[PrimitiveValue, "SubClrEnv"]
+Value = Union[LeafValue, "SubClrEnv"]
 
 
 class SubClrEnv(abc.MutableMapping):
@@ -90,10 +90,10 @@ class SubClrEnv(abc.MutableMapping):
         except KeyError as e:
             raise AttributeError(str(e))
 
-    def __setitem__(self, key: str, value: PrimitiveValue):
+    def __setitem__(self, key: str, value: LeafValue):
         self._root.set_runtime_override(self._sub_key_path(key), value)
 
-    def __setattr__(self, key: str, value: PrimitiveValue):
+    def __setattr__(self, key: str, value: LeafValue):
         """Sets a runtime override as an attribute."""
         # Internal fields are prefixed with a _ and should be treated normally.
         if key.startswith("_"):
@@ -145,7 +145,7 @@ class SubClrEnv(abc.MutableMapping):
                 subkeys.add(env_var.split("__")[0].lower())
         return subkeys
 
-    def _evaluate_key(self, key: str) -> Union[PrimitiveValue, Mapping, None]:
+    def _evaluate_key(self, key: str) -> Union[LeafValue, Mapping, None]:
         """Returns the stored value for the given key.
 
         There are three potential sources of data (in order of priority):
@@ -219,7 +219,7 @@ class RootClrEnv(SubClrEnv):
         # efficent lookup for subkeys.
         # env.a.b.c = 'd' ==> _runtime_overrides = {('a', 'b'): {'c': 'd'}}
         self._runtime_overrides: MutableMapping[
-            Tuple[str, ...], MutableMapping[str, PrimitiveValue]
+            Tuple[str, ...], MutableMapping[str, LeafValue]
         ] = {}
 
     def _make_env(self) -> NestedMapping:
@@ -230,7 +230,9 @@ class RootClrEnv(SubClrEnv):
         """Clear all runtime overrides."""
         self._runtime_overrides.clear()
 
-    def set_runtime_override(self, key_path: Sequence[str], value: PrimitiveValue):
+    def set_runtime_override(
+        self, key_path: Union[str, Sequence[str]], value: LeafValue
+    ):
         """Sets a runtime override.
 
         Only do this in tests and ideally use unittest.mock.patch or monkeypath.setattr
@@ -239,19 +241,18 @@ class RootClrEnv(SubClrEnv):
         Notice that this method is only on the root node."""
         if not key_path:
             raise ValueError("key_path can not be empty.")
+        # No support for nested runtime overrides. Only allow primitives.
+        check_valid_leaf_value(key_path, value)
+
         if isinstance(key_path, str):
             key_path = key_path.split(".")
 
         # Check that the key already exists.
-        parent: Union[SubClrEnv, PrimitiveValue] = self
+        parent: Union[SubClrEnv, LeafValue] = self
         for name in key_path:
             assert isinstance(parent, Mapping)
             assert name in parent, f"{name, parent}"
             parent = parent[name]
-
-        # No support for nested runtime overrides. Only allow primitives.
-        if not isinstance(value, PrimitiveValue.__args__):  # type: ignore
-            raise ValueError("Env values must be one of {str, int, float, boolean}.")
 
         # Ideally we wouldn't be overriding global state like this at all, but at least
         # make it loud.

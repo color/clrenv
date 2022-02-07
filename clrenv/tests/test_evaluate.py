@@ -179,6 +179,6 @@ def test_env_var(monkeypatch, default_env):
 
 def test_underscored_keys(default_env):
     with pytest.raises(KeyError):
-        default_env["__env"]
+        default_env["__env"]  # pylint: disable=pointless-statement
     with pytest.raises(AttributeError):
         getattr(default_env.__unknown)
