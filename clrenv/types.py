@@ -1,4 +1,4 @@
-from typing import Any, List, Mapping, MutableMapping, Union
+from typing import Any, List, Mapping, MutableMapping, NamedTuple, Union
 
 """Defines type annotations for use in clrenv.
 
@@ -6,8 +6,16 @@ Ideally we would only allow str leaf values so that they can be migrated to an e
 var based system. For now we must supports more complex values.
 """
 
+class Secret(NamedTuple):
+    source: str
+    value: str
+
+    def __repr__(self) -> str:
+        return self.source
+
+
 # Type that can be read or set as values of leaf nodes.
-LeafValue = Union[bool, int, float, str, List[Union[bool, int, float, str]]]
+LeafValue = Union[bool, int, float, str, List[Union[bool, int, float, str]], Secret]
 # Type of a non leaf node.
 NestedMapping = Mapping[str, Union[LeafValue, Mapping[str, Any]]]
 MutableNestedMapping = MutableMapping[str, Union[LeafValue, MutableMapping[str, Any]]]

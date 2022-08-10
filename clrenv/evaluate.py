@@ -41,7 +41,7 @@ from typing import (
 
 from .path import environment_paths
 from .read import EnvReader
-from .types import LeafValue, NestedMapping, check_valid_leaf_value
+from .types import LeafValue, NestedMapping, Secret, check_valid_leaf_value
 
 logger = logging.getLogger(__name__)
 
@@ -184,6 +184,9 @@ class SubClrEnv(abc.MutableMapping):
         # The content of the returned mapping does not matter.
         if value is None and key in self._sub_keys:
             return {}
+
+        if isinstance(value, Secret):
+            return value.value
 
         return value
 
