@@ -114,13 +114,13 @@ class EnvReader:
         value = os.path.expandvars(value)
         # If value is a path starting with ~, expand.
         if value.startswith("~"):
-            value = os.path.expanduser(value)
+            return os.path.expanduser(value)
         # Substitute from clrypt keyfile.
         elif value.startswith("^keyfile "):
-            value = Secret(source=value, value=self.evaluate_clrypt_key(value[9:]))
+            return Secret(source=value, value=self.evaluate_clrypt_key(value[9:]))
         # Substitute from aws ssm parameter store.
         elif value.startswith("^parameter "):
-            value = Secret(source=value, value=self.evaluate_ssm_parameter(value[11:]))
+            return Secret(source=value, value=self.evaluate_ssm_parameter(value[11:]))
 
         return value
 
