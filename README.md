@@ -86,13 +86,13 @@ $ export CLRENV_OVERLAY_PATH=/path/to/environment.overlay.yaml
 ## Development
 * Create a virtualenv and activate it
 ```
-python3 -m venv_clrenv <location>
+python3 -m venv venv_clrenv <location>
 source <location>/bin/activate
 ```
-* Install this package as editable (symlinked to source files)
+* Install this package as editable (symlinked to source files), as well as some dev requirements.
 ```
 pip install -e .
-pip install black isort
+pip install black isort pytest mypy "clrypt@ git+https://github.com/color/clrypt.git@v0.2.3#861efad297750138e25d18c4867009419fe39459" types-PyYAML
 ```
 * Run the tests
 ```
