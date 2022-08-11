@@ -1,5 +1,7 @@
 import functools
+from types import SimpleNamespace
 
+import botocore.exceptions  # type: ignore
 import pytest
 import yaml
 
@@ -182,3 +184,67 @@ def test_underscored_keys(default_env):
         default_env["__env"]  # pylint: disable=pointless-statement
     with pytest.raises(AttributeError):
         getattr(default_env.__unknown)
+
+
+def test_clrypt_secret(tmp_path, monkeypatch):
+    """
+    A keyfile secret should be accessible via clrenv.
+    """
+    env_path = tmp_path / "env"
+    env_path.write_text(yaml.dump({"base": {"foo": "^keyfile aaa"}}))
+
+    import clrypt
+
+    def mock_read(group, name):
+        assert group == "keys"
+        assert name == "keys"
+        return {"aaa": "bbb"}
+
+    monkeypatch.setattr(clrypt, "read_file_as_dict", mock_read)
+
+    env = clrenv.evaluate.RootClrEnv([env_path])
+
+    # Check that the repr does not leak the secret, but the secret is still accessible
+    assert '^keyfile aaa' in repr(env)
+    assert 'bbb' not in repr(env)
+    assert env.foo == "bbb"    
+
+def test_ssm_secret(tmp_path, monkeypatch):
+    """
+    A SSM secret should be accessible via clrenv.
+    """
+    env_path = tmp_path / "env"
+    env_path.write_text(yaml.dump({"base": {"foo": "^parameter aaa"}}))
+
+    monkeypatch.setenv("CLRENV_OFFLINE_DEV", "")
+    import boto3
+
+    class MockClient:
+        exceptions = SimpleNamespace()
+        exceptions.ParameterNotFound = botocore.exceptions.ClientError
+
+        def get_parameter(self, Name=None, WithDecryption=None):
+            assert WithDecryption is True
+            assert Name in ("aaa", "endpoint_error", "param_error")
+            if Name == "aaa":
+                return {"Parameter": {"Value": "bbb"}}
+            elif Name == "endpoint_error":
+                raise botocore.exceptions.EndpointConnectionError(endpoint_url="url")
+            elif Name == "param_error":
+                raise MockClient.exceptions.ParameterNotFound(
+                    error_response={}, operation_name=""
+                )
+
+    def mock_client(name):
+        assert name == "ssm"
+        return MockClient()
+
+    monkeypatch.setattr(boto3, "client", mock_client)
+
+    env = clrenv.evaluate.RootClrEnv([env_path])
+
+    # Check that the repr does not leak the secret, but the secret is still accessible
+    assert '^parameter aaa' in repr(env)
+    assert 'bbb' not in repr(env)
+    assert env.foo == "bbb"    
+

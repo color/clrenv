@@ -6,6 +6,7 @@ import pytest
 import yaml
 
 import clrenv
+from clrenv.types import Secret
 
 
 @pytest.fixture(autouse=True)
@@ -75,7 +76,8 @@ def test_clrypt(tmp_path, monkeypatch):
     env_path = tmp_path / "env"
     env_path.write_text(yaml.dump({"base": {"foo": "^keyfile aaa"}}))
     env = clrenv.read.EnvReader([env_path]).read()
-    assert env["foo"] == "bbb"
+    assert isinstance(env["foo"], Secret)
+    assert env["foo"].value == "bbb"
 
 
 def test_ssm(tmp_path, monkeypatch):
@@ -107,7 +109,8 @@ def test_ssm(tmp_path, monkeypatch):
     env_path = tmp_path / "env"
     env_path.write_text(yaml.dump({"base": {"foo": "^parameter aaa"}}))
     env = clrenv.read.EnvReader([env_path]).read()
-    assert env["foo"] == "bbb"
+    assert isinstance(env["foo"], Secret)
+    assert env["foo"].value == "bbb"
 
     env_path.write_text(yaml.dump({"base": {"foo": "^parameter endpoint_error"}}))
     with pytest.raises(botocore.exceptions.EndpointConnectionError):
@@ -124,4 +127,5 @@ def test_offline_parameter_flag(tmp_path, monkeypatch):
     env_path = tmp_path / "env"
     env_path.write_text(yaml.dump({"base": {"foo": "^parameter aaa"}}))
     env = clrenv.read.EnvReader([env_path]).read()
-    assert env["foo"] == "CLRENV_OFFLINE_PLACEHOLDER"
+    assert isinstance(env["foo"], Secret)
+    assert env["foo"].value == "CLRENV_OFFLINE_PLACEHOLDER"

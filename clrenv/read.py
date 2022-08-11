@@ -15,14 +15,14 @@ import logging
 import os
 from collections import abc, deque
 from pathlib import Path
-from typing import Any, Deque, Iterable, Mapping, Optional, Tuple
+from typing import Any, Deque, Iterable, Mapping, Optional, Tuple, Union
 
 import boto3
 from botocore.exceptions import EndpointConnectionError  # type: ignore
 
 from .deepmerge import deepmerge
 from .path import environment_paths
-from .types import MutableNestedMapping, NestedMapping, check_valid_leaf_value
+from .types import MutableNestedMapping, NestedMapping, Secret, check_valid_leaf_value
 
 logger = logging.getLogger(__name__)
 
@@ -108,19 +108,19 @@ class EnvReader:
 
         return result
 
-    def postprocess_str(self, value: str) -> str:
+    def postprocess_str(self, value: str) -> Union[str, Secret]:
         """Post process string values."""
         # Expand environmental variables in the form of $FOO or ${FOO}.
         value = os.path.expandvars(value)
         # If value is a path starting with ~, expand.
         if value.startswith("~"):
-            value = os.path.expanduser(value)
+            return os.path.expanduser(value)
         # Substitute from clrypt keyfile.
         elif value.startswith("^keyfile "):
-            value = self.evaluate_clrypt_key(value[9:])
+            return Secret(source=value, value=self.evaluate_clrypt_key(value[9:]))
         # Substitute from aws ssm parameter store.
         elif value.startswith("^parameter "):
-            value = self.evaluate_ssm_parameter(value[11:])
+            return Secret(source=value, value=self.evaluate_ssm_parameter(value[11:]))
 
         return value
 
