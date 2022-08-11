@@ -11,6 +11,9 @@ setup(
     author_email="dev@getcolor.com",
     url="https://github.com/color/clrenv",
     packages=["clrenv"],
+    package_data={
+        'clrenv': ['py.typed'],
+    },
     install_requires=requirements,
     setup_requires=["pytest-runner"],
     tests_require=requirements + ["pytest", "pytest-cov"],
