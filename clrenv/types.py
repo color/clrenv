@@ -11,7 +11,14 @@ class Secret(NamedTuple):
     value: str
 
     def __repr__(self) -> str:
-        return self.source
+        """
+        Return a Secret's representation without exposing the secret.
+
+        In the event that a Secret's (or, more generally, a ClrEnv object's)
+        representation is logged, this will prevent us from leaking secrets into
+        plaintext.
+        """
+        return f"Secret(source='{self.source}')"
 
 
 # Type that can be read or set as values of leaf nodes.
