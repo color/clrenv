@@ -5,7 +5,7 @@ requirements = ["PyYAML>=4.2", "boto3>=1.15.18"]
 
 setup(
     name="clrenv",
-    version="0.2.4",
+    version="0.2.5",
     description="A tool to give easy access to environment yaml file to python.",
     author="Color",
     author_email="dev@getcolor.com",

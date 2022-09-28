@@ -6,6 +6,7 @@ Ideally we would only allow str leaf values so that they can be migrated to an e
 var based system. For now we must supports more complex values.
 """
 
+
 class Secret(NamedTuple):
     source: str
     value: str

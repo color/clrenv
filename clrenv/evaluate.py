@@ -110,8 +110,17 @@ class SubClrEnv(abc.MutableMapping):
     def __len__(self):
         return len(self._sub_keys)
 
-    def __repr__(self):
-        return f"ClrEnv[{'.'.join(self._key_path)}]={self._env}"
+    def __repr__(self, include_prefix=True):
+        prefix = f"ClrEnv[{'.'.join(self._key_path)}]=" if include_prefix else ""
+        values = {
+            key: repr(self._env.get(key))
+            if isinstance(self._env.get(key), Secret)
+            else SubClrEnv(self, key).__repr__(include_prefix=False)
+            if isinstance(self._env.get(key), abc.Mapping)
+            else self[key]
+            for key in self
+        }
+        return f"{prefix}{values}"
 
     def _make_env(self) -> NestedMapping:
         """Creates an env map relative to this path."""
@@ -148,7 +157,7 @@ class SubClrEnv(abc.MutableMapping):
     def _evaluate_key(self, key: str) -> Union[LeafValue, Mapping, None]:
         """Returns the stored value for the given key.
 
-        There are three potential sources of data (in order of priority):
+        There are three potential sources of data (highest to lowest priority):
         1) Runtime overrides
         2) Environment variables
         3) Merged yaml files

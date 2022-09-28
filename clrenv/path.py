@@ -38,7 +38,9 @@ def environment_paths() -> Tuple[Path, ...]:
     if not base_path:
         base_path = _find_in_cwd_or_parents("environment.yaml")
     if not base_path or not base_path.is_file():
-        raise ValueError(f"Base environment file could not be located. {base_path}")
+        raise ValueError(
+            f"Base environment file (CLRENV_PATH) could not be located. {base_path if base_path else ''}"
+        )
     result.append(base_path)
     return tuple(result)
 
