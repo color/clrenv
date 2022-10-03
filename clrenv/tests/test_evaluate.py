@@ -205,9 +205,10 @@ def test_clrypt_secret(tmp_path, monkeypatch):
     env = clrenv.evaluate.RootClrEnv([env_path])
 
     # Check that the repr does not leak the secret, but the secret is still accessible
-    assert '^keyfile aaa' in repr(env)
-    assert 'bbb' not in repr(env)
-    assert env.foo == "bbb"    
+    assert "^keyfile aaa" in repr(env)
+    assert "bbb" not in repr(env)
+    assert env.foo == "bbb"
+
 
 def test_ssm_secret(tmp_path, monkeypatch):
     """
@@ -244,7 +245,6 @@ def test_ssm_secret(tmp_path, monkeypatch):
     env = clrenv.evaluate.RootClrEnv([env_path])
 
     # Check that the repr does not leak the secret, but the secret is still accessible
-    assert '^parameter aaa' in repr(env)
-    assert 'bbb' not in repr(env)
-    assert env.foo == "bbb"    
-
+    assert "^parameter aaa" in repr(env)
+    assert "bbb" not in repr(env)
+    assert env.foo == "bbb"
