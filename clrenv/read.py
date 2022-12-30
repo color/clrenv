@@ -1,6 +1,7 @@
 """
 Reads clrenv environment files.
 """
+from dataclasses import dataclass
 import yaml
 
 try:
@@ -15,7 +16,7 @@ import logging
 import os
 from collections import abc, deque
 from pathlib import Path
-from typing import Any, Deque, Iterable, Mapping, Optional, Tuple, Union
+from typing import Any, Callable, Deque, Iterable, List, Mapping, Optional, Tuple, Union
 
 import boto3
 from botocore.exceptions import EndpointConnectionError  # type: ignore
@@ -33,12 +34,43 @@ logger = logging.getLogger(__name__)
 #  if it cannot connect to the Parameter Store API.
 OFFLINE_PARAMETER_FLAG = "CLRENV_OFFLINE_DEV"
 OFFLINE_PARAMETER_VALUE = "CLRENV_OFFLINE_PLACEHOLDER"
+# The prefix (including trailing space) that specifies that the given value must
+# be formatted as a chamber variable name that will be used to look up the
+# required environment variable for the actual value.
+_CHAMBER_PREFIX = "^chamber/v1 "
+
+
+@dataclass(frozen=True, order=True)
+class MissingEnvVar:
+    yaml_key_path: str
+    chamber_var_name: str
+    env_var: str
+
+
+class MissingEnvVarsError(ValueError):
+    """MissingEnvVarsError is raised when some specified '^envsec/v1' AWS parameter paths have no equivalent environment variable set."""
+
+    def __init__(self, missing: Iterable[MissingEnvVar]):
+        self.missing = sorted(missing)
+        errs = [
+            f"Env var '{x.env_var}' from the Chamber var name '{x.chamber_var_name}' from YAML key path '{x.yaml_key_path}'"
+            for x in missing
+        ]
+        all_errs = "\n\t".join(errs)
+
+        msg = f"The following parameters were not set in the environment variables or were set to empty strings:\n\t{all_errs}\n"
+        super().__init__(msg)
 
 
 class EnvReader:
-    def __init__(self, environment_paths: Iterable[Path]):
+    def __init__(
+        self,
+        environment_paths: Iterable[Path],
+        getenv: Optional[Callable[[str], Optional[str]]] = None,
+    ):
         self.environment_paths: Tuple[Path, ...] = tuple(environment_paths)
         self.mode: Optional[str] = os.environ.get("CLRENV_MODE")
+        self._getenv = getenv or os.getenv
 
     def read(self) -> NestedMapping:
         """Reads, merges and post-processes environment from disk.
@@ -86,29 +118,38 @@ class EnvReader:
 
         # Post process values. Breadth-first search.
         postprocess_queue: Deque[Tuple[str, MutableNestedMapping]] = deque()
+        missing_param_env_vars: List[MissingEnvVar] = []
         postprocess_queue.append(("", result))
         while postprocess_queue:
             key_prefix, mapping = postprocess_queue.pop()
             for key, value in mapping.items():
                 # Disallow non string keys
+                key_path = f"{key_prefix}{key}"
                 if not isinstance(key, str):
-                    raise ValueError(f"Only string keys are allowed: {key_prefix}{key}")
+                    raise ValueError(f"Only string keys are allowed: {key_path}")
                 if key.startswith("_"):
-                    raise ValueError(f"Keys can not start with _: {key_prefix}{key}")
+                    raise ValueError(f"Keys can not start with _: {key_path}")
                 if isinstance(value, abc.Mapping):
                     # Add to queue for post processing.
-                    postprocess_queue.append((f"{key_prefix}{key}.", value))
+                    postprocess_queue.append((f"{key_path}.", value))
                 elif value is None:
                     # Coerce Nones to empty strings.
                     mapping[key] = ""  # type: ignore
                 elif isinstance(value, str):
-                    mapping[key] = self.postprocess_str(value)
+                    mapping[key] = self.postprocess_str(
+                        value, key_path, missing_param_env_vars
+                    )
                 else:
                     check_valid_leaf_value(key_prefix + key, value)
 
+        if missing_param_env_vars:
+            raise MissingEnvVarsError(missing_param_env_vars)
+
         return result
 
-    def postprocess_str(self, value: str) -> Union[str, Secret]:
+    def postprocess_str(
+        self, value: str, key_path: str, missing_values: List[MissingEnvVar]
+    ) -> Union[str, Secret]:
         """Post process string values."""
         # Expand environmental variables in the form of $FOO or ${FOO}.
         value = os.path.expandvars(value)
@@ -118,10 +159,24 @@ class EnvReader:
         # Substitute from clrypt keyfile.
         elif value.startswith("^keyfile "):
             return Secret(source=value, value=self.evaluate_clrypt_key(value[9:]))
+        elif value.startswith(_CHAMBER_PREFIX):
+            chamber_var_name = value[len(_CHAMBER_PREFIX) :]
+            env_name = self._chamber_name_to_env_var(chamber_var_name, key_path)
+            env_value_raw = self._getenv(env_name)
+            env_value = env_value_raw and env_value_raw.strip()
+            if not env_value:
+                missing_values.append(
+                    MissingEnvVar(
+                        yaml_key_path=key_path,
+                        env_var=env_name,
+                        chamber_var_name=chamber_var_name,
+                    )
+                )
+                return ""
+            return Secret(source=value, value=env_value)
         # Substitute from aws ssm parameter store.
         elif value.startswith("^parameter "):
             return Secret(source=value, value=self.evaluate_ssm_parameter(value[11:]))
-
         return value
 
     def evaluate_clrypt_key(self, name: str) -> str:
@@ -134,6 +189,19 @@ class EnvReader:
             self.clrypt_keyfile = clrypt.read_file_as_dict("keys", "keys")
 
         return str(self.clrypt_keyfile.get(name, ""))
+
+    def _chamber_name_to_env_var(self, name: str, key_path: str) -> str:
+        """
+        Converts a Chamber var name (that is, what's passed as the parameter's
+        name to `chamber write` into to a Chamber-formatted environment variable
+        name. Periods (`.`) and dashes (`-`) are not allowed. While they're allowed by `chamber write`, they produce invalid environment varaible names.
+        See https://github.com/segmentio/chamber/issues/366
+        """
+        if any([x in name for x in [".", "-", "'", '"']]):
+            raise ValueError(
+                f"Chamber variable name '{name}' in key '{key_path}' contains invalid characters."
+            )
+        return name.upper()
 
     def evaluate_ssm_parameter(self, name: str) -> str:
         """Returns a value from aws ssm parameter store."""
